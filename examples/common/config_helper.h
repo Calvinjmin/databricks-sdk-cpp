@@ -6,76 +6,47 @@
 #include <stdexcept>
 
 /**
- * @brief Helper to load Databricks configuration from environment variables
+ * @brief Helper functions for Databricks configuration examples
  */
 namespace examples
 {
     /**
-     * @brief Load configuration from environment variables
+     * @brief Load configuration from all available sources
      *
-     * Reads the following environment variables:
-     * - DATABRICKS_HOST or DATABRICKS_SERVER_HOSTNAME
-     * - DATABRICKS_TOKEN or DATABRICKS_ACCESS_TOKEN
-     * - DATABRICKS_HTTP_PATH
-     * - DATABRICKS_TIMEOUT (optional, defaults to 120)
+     * Uses the SDK's built-in configuration loading with the following precedence:
+     * 1. Profile file (~/.databrickscfg) - if complete, uses exclusively
+     * 2. Environment variables - only as fallback if profile missing/incomplete
      *
-     * @return Client::Config loaded from environment
-     * @throws std::runtime_error if required variables are missing
+     * @param profile The profile name to load from ~/.databrickscfg (default: "DEFAULT")
+     * @param verbose If true, print configuration source information (default: true)
+     * @return Client::Config loaded from available sources
+     * @throws std::runtime_error if no valid configuration is found
+     */
+    inline databricks::Client::Config load_config(const std::string& profile = "DEFAULT", bool verbose = true)
+    {
+        if (verbose) {
+            // Check which source will be used before loading
+            databricks::Client::Config test_config;
+            bool profile_exists = test_config.load_profile_config(profile);
+            
+            if (profile_exists) {
+                std::cout << "Configuration loaded from: Profile [" << profile << "]" << std::endl;
+            } else {
+                std::cout << "Configuration loaded from: Environment variables" << std::endl;
+            }
+        }
+
+        // Use the SDK's factory method that handles all the logic
+        return databricks::Client::Config::from_environment(profile);
+    }
+
+    /**
+     * @brief Legacy function name for backward compatibility
+     * @deprecated Use load_config() instead
      */
     inline databricks::Client::Config load_config_from_env()
     {
-        databricks::Client::Config config;
-
-        // Try to get host
-        const char *host = std::getenv("DATABRICKS_HOST");
-        if (!host)
-        {
-            host = std::getenv("DATABRICKS_SERVER_HOSTNAME");
-        }
-        if (!host)
-        {
-            throw std::runtime_error(
-                "Missing DATABRICKS_HOST or DATABRICKS_SERVER_HOSTNAME environment variable.\n"
-                "Set it with: export DATABRICKS_HOST=\"https://your-workspace.databricks.com\"");
-        }
-        config.host = host;
-
-        // Try to get token
-        const char *token = std::getenv("DATABRICKS_TOKEN");
-        if (!token)
-        {
-            token = std::getenv("DATABRICKS_ACCESS_TOKEN");
-        }
-        if (!token)
-        {
-            throw std::runtime_error(
-                "Missing DATABRICKS_TOKEN or DATABRICKS_ACCESS_TOKEN environment variable.\n"
-                "Set it with: export DATABRICKS_TOKEN=\"your_token\"");
-        }
-        config.token = token;
-
-        // Get HTTP path
-        const char *http_path = std::getenv("DATABRICKS_HTTP_PATH");
-        if (!http_path)
-        {
-            throw std::runtime_error(
-                "Missing DATABRICKS_HTTP_PATH environment variable.\n"
-                "Set it with: export DATABRICKS_HTTP_PATH=\"/sql/1.0/warehouses/your_warehouse_id\"");
-        }
-        config.http_path = http_path;
-
-        // Get timeout (optional, defaults to 120)
-        const char *timeout = std::getenv("DATABRICKS_TIMEOUT");
-        if (timeout)
-        {
-            config.timeout_seconds = std::atoi(timeout);
-        }
-        else
-        {
-            config.timeout_seconds = 120; // Default
-        }
-
-        return config;
+        return load_config("DEFAULT", true);
     }
 
     /**

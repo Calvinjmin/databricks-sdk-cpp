@@ -41,6 +41,55 @@ namespace databricks
              * @brief Check if two configs are equivalent for pooling purposes
              */
             bool equivalent_for_pooling(const Config& other) const;
+
+            /**
+             * @brief Load Databricks profile configuration from the default CLI config file.
+             * 
+             * Attempts to populate the current Config object (`host`, `token`, `http_path`) 
+             * from the Databricks CLI configuration file (`~/.databrickscfg`).  
+             * 
+             * @param profile The name of the profile to load (default: `"DEFAULT"`).
+             *                Must match a section in the config file like `[DEFAULT]`.
+             * 
+             * @return true if the profile was found and all required fields were loaded; 
+             *         false otherwise.
+             *
+             * @note This function modifies the current Config object in-place.
+             */
+            bool load_profile_config(const std::string& profile = "DEFAULT");
+
+            /**
+             * @brief Load configuration from environment variables.
+             * 
+             * Attempts to populate the current Config object from environment variables:
+             * - DATABRICKS_HOST or DATABRICKS_SERVER_HOSTNAME
+             * - DATABRICKS_TOKEN or DATABRICKS_ACCESS_TOKEN
+             * - DATABRICKS_HTTP_PATH or DATABRICKS_SQL_HTTP_PATH
+             * - DATABRICKS_TIMEOUT (optional)
+             * 
+             * @return true if all required environment variables were found; false otherwise.
+             *
+             * @note This function modifies the current Config object in-place, only 
+             *       overriding fields that have corresponding environment variables set.
+             */
+            bool load_from_env();
+
+            /**
+             * @brief Create a Config by loading from all available sources.
+             * 
+             * Loads configuration with the following precedence (highest to lowest):
+             * 1. Profile configuration file (~/.databrickscfg) - if complete, stops here
+             * 2. Environment variables - only used as fallback if profile is missing/incomplete
+             * 
+             * This gives profile configuration priority, with environment variables as a
+             * fallback for when no profile is configured. The profile is "all or nothing" -
+             * if it exists and has all required fields, it's used exclusively.
+             * 
+             * @param profile The profile name to load from ~/.databrickscfg (default: "DEFAULT")
+             * @return Config object populated from available sources
+             * @throws std::runtime_error if no valid configuration is found
+             */
+            static Config from_environment(const std::string& profile = "DEFAULT");
         };
 
         /**
