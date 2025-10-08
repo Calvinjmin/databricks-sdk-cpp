@@ -1,0 +1,69 @@
+# Doxyfile for Databricks C++ SDK
+
+# Project information
+PROJECT_NAME           = "Databricks C++ SDK"
+PROJECT_NUMBER         = "0.1.0"
+PROJECT_BRIEF          = "Interact with Databricks via an SDK"
+OUTPUT_DIRECTORY       = docs
+
+# Input configuration
+INPUT                  = include/databricks src README.md
+FILE_PATTERNS          = *.h *.cpp *.md
+RECURSIVE              = YES
+EXCLUDE                = src/internal
+EXCLUDE_PATTERNS       = */build/* */cmake/*
+
+# Output formats
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+
+# Documentation extraction
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+SHOW_INCLUDE_FILES     = YES
+INLINE_SOURCES         = NO
+
+# Markdown support
+MARKDOWN_SUPPORT       = YES
+USE_MDFILE_AS_MAINPAGE = README.md
+
+# Diagrams and graphs
+HAVE_DOT               = NO
+UML_LOOK               = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+
+# Javadoc-style comments
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+
+# Output styling
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
+HTML_TIMESTAMP         = YES
+GENERATE_TREEVIEW      = YES
+
+# Warnings
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+
+# Source browser
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+# Alphabetical index
+ALPHABETICAL_INDEX     = YES
+COLS_IN_ALPHA_INDEX    = 5
+
+# Search engine
+SEARCHENGINE           = YES

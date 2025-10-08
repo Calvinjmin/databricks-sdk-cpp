@@ -1,0 +1,141 @@
+cmake_minimum_required(VERSION 3.14)
+project(databricks_sdk
+    VERSION 0.1.0
+    DESCRIPTION "Databricks C++ SDK"
+    LANGUAGES CXX)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Options
+option(BUILD_EXAMPLES "Build example applications" ON)
+option(BUILD_TESTS "Build tests" OFF)
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
+# Find ODBC
+if(WIN32)
+    # Windows uses odbc32
+    set(ODBC_LIBRARIES odbc32)
+else()
+    # Unix/Linux/macOS uses unixODBC
+    # Check for ARM64 Homebrew path first (Apple Silicon)
+    if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        set(ODBC_INCLUDE_DIR /opt/homebrew/include)
+        set(ODBC_LIBRARY /opt/homebrew/lib/libodbc.dylib)
+    else()
+        find_path(ODBC_INCLUDE_DIR sql.h
+            PATHS /usr/include /usr/local/include /opt/homebrew/include
+            PATH_SUFFIXES odbc)
+        find_library(ODBC_LIBRARY
+            NAMES odbc iodbc unixodbc
+            PATHS /usr/lib /usr/local/lib /opt/homebrew/lib)
+    endif()
+
+    if(ODBC_LIBRARY)
+        set(ODBC_LIBRARIES ${ODBC_LIBRARY})
+        if(ODBC_INCLUDE_DIR)
+            set(ODBC_INCLUDE_DIRS ${ODBC_INCLUDE_DIR})
+        endif()
+    else()
+        message(FATAL_ERROR "ODBC library not found. Please install unixODBC development package.")
+    endif()
+endif()
+
+# Library sources
+set(SOURCES
+    src/client.cpp
+    src/connection_pool.cpp
+    src/internal/pool_manager.cpp
+)
+
+set(HEADERS
+    include/databricks/client.h
+    include/databricks/connection_pool.h
+    include/databricks/version.h
+)
+
+# Internal headers (not installed)
+set(INTERNAL_HEADERS
+    src/internal/pool_manager.h
+)
+
+# Create library target
+add_library(databricks_sdk ${SOURCES} ${HEADERS})
+
+# Set include directories
+target_include_directories(databricks_sdk
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${ODBC_INCLUDE_DIRS}
+)
+
+# Link ODBC libraries
+target_link_libraries(databricks_sdk PRIVATE ${ODBC_LIBRARIES})
+
+# Set library properties
+set_target_properties(databricks_sdk PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    PUBLIC_HEADER "${HEADERS}"
+    BUILD_RPATH "/opt/homebrew/lib;/usr/local/lib"
+    INSTALL_RPATH "/opt/homebrew/lib;/usr/local/lib"
+)
+
+# Compiler warnings
+if(MSVC)
+    target_compile_options(databricks_sdk PRIVATE /W4)
+else()
+    target_compile_options(databricks_sdk PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Examples
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
+# Tests
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# Installation
+include(GNUInstallDirs)
+
+install(TARGETS databricks_sdk
+    EXPORT databricks_sdk-targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/databricks
+)
+
+install(EXPORT databricks_sdk-targets
+    FILE databricks_sdk-targets.cmake
+    NAMESPACE databricks_sdk::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/databricks_sdk
+)
+
+# Create config file
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/databricks_sdk-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/databricks_sdk-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/databricks_sdk-config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/databricks_sdk
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/databricks_sdk-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/databricks_sdk-config-version.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/databricks_sdk
+)
