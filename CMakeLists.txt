@@ -23,19 +23,21 @@ else()
     # Try to find ODBC using standard search paths
     find_path(ODBC_INCLUDE_DIR sql.h
         PATHS
-            /usr/include
-            /usr/local/include
             /opt/homebrew/include
+            /usr/local/include
+            /usr/include
             /opt/local/include
-        PATH_SUFFIXES odbc)
+        PATH_SUFFIXES odbc
+        NO_DEFAULT_PATH)
 
     find_library(ODBC_LIBRARY
         NAMES odbc iodbc unixodbc
         PATHS
-            /usr/lib
+            /opt/homebrew/lib 
             /usr/local/lib
-            /opt/homebrew/lib
-            /opt/local/lib)
+            /usr/lib
+            /opt/local/lib
+        NO_DEFAULT_PATH)
 
     if(ODBC_LIBRARY)
         set(ODBC_LIBRARIES ${ODBC_LIBRARY})

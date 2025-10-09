@@ -286,13 +286,7 @@ namespace databricks
 
         bool validate_driver_exists()
         {
-            SQLHSTMT hstmt = SQL_NULL_HSTMT;
-            SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
-            if (!SQL_SUCCEEDED(ret))
-            {
-                return false;
-            }
-
+            // Enumerate ODBC drivers using the environment handle (no connection needed)
             SQLCHAR driver[256];
             SQLCHAR attributes[256];
             SQLSMALLINT driver_len, attr_len;
@@ -304,13 +298,11 @@ namespace databricks
                 std::string driver_name(reinterpret_cast<char*>(driver));
                 if (driver_name == config.odbc_driver_name)
                 {
-                    SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
                     return true;
                 }
                 direction = SQL_FETCH_NEXT;
             }
 
-            SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
             return false;
         }
 
@@ -500,13 +492,15 @@ namespace databricks
         pimpl_->disconnect();
     }
 
-    std::vector<std::vector<std::string>> Client::query(const std::string &sql)
+    std::vector<std::vector<std::string>> Client::query(
+        const std::string &sql,
+        const std::vector<Parameter> &params)
     {
         // If pooling is enabled, acquire connection from pool and execute
         if (pimpl_->pool)
         {
             auto pooled_conn = pimpl_->pool->acquire();
-            return pooled_conn->query(sql);
+            return pooled_conn->query(sql, params);
             // Connection automatically returns to pool when pooled_conn goes out of scope
         }
 
@@ -524,13 +518,69 @@ namespace databricks
             throw std::runtime_error("Failed to allocate statement handle");
         }
 
-        // Execute query
-        ret = SQLExecDirect(hstmt, (SQLCHAR *)sql.c_str(), SQL_NTS);
-        if (!SQL_SUCCEEDED(ret))
+        // Choose execution path based on whether parameters are provided
+        if (params.empty())
         {
-            std::string error = pimpl_->get_odbc_error(SQL_HANDLE_STMT, hstmt);
-            SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
-            throw std::runtime_error("Query execution failed: " + error);
+            // Static query - use direct execution for better performance
+            ret = SQLExecDirect(hstmt, (SQLCHAR *)sql.c_str(), SQL_NTS);
+            if (!SQL_SUCCEEDED(ret))
+            {
+                std::string error = pimpl_->get_odbc_error(SQL_HANDLE_STMT, hstmt);
+                SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+                throw std::runtime_error("Query execution failed: " + error);
+            }
+        }
+        else
+        {
+            // Parameterized query - use prepared statement for security
+            ret = SQLPrepare(hstmt, (SQLCHAR *)sql.c_str(), SQL_NTS);
+            if (!SQL_SUCCEEDED(ret))
+            {
+                std::string error = pimpl_->get_odbc_error(SQL_HANDLE_STMT, hstmt);
+                SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+                throw std::runtime_error("Failed to prepare statement: " + error);
+            }
+
+            // Bind parameters - store values to prevent dangling pointers
+            std::vector<std::string> param_storage;
+            std::vector<SQLLEN> param_indicators;
+            param_storage.reserve(params.size());
+            param_indicators.resize(params.size());
+
+            for (size_t i = 0; i < params.size(); i++)
+            {
+                param_storage.push_back(params[i].value);
+                param_indicators[i] = param_storage[i].length();
+
+                ret = SQLBindParameter(
+                    hstmt,
+                    static_cast<SQLUSMALLINT>(i + 1),  // Parameter number (1-based)
+                    SQL_PARAM_INPUT,                    // Input parameter
+                    params[i].c_type,                   // C data type
+                    params[i].sql_type,                 // SQL data type
+                    param_storage[i].length(),          // Column size
+                    0,                                   // Decimal digits
+                    (SQLPOINTER)param_storage[i].c_str(), // Parameter value pointer
+                    param_storage[i].length(),          // Buffer length
+                    &param_indicators[i]                // Length/indicator
+                );
+
+                if (!SQL_SUCCEEDED(ret))
+                {
+                    std::string error = pimpl_->get_odbc_error(SQL_HANDLE_STMT, hstmt);
+                    SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+                    throw std::runtime_error("Failed to bind parameter " + std::to_string(i + 1) + ": " + error);
+                }
+            }
+
+            // Execute the prepared statement
+            ret = SQLExecute(hstmt);
+            if (!SQL_SUCCEEDED(ret))
+            {
+                std::string error = pimpl_->get_odbc_error(SQL_HANDLE_STMT, hstmt);
+                SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+                throw std::runtime_error("Query execution failed: " + error);
+            }
         }
 
         // Get column count

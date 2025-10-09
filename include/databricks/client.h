@@ -4,6 +4,19 @@
 #include <memory>
 #include <vector>
 #include <future>
+#include <cstdint>
+
+// Forward declare ODBC types to avoid including sql.h in header
+typedef short SQLSMALLINT;
+
+// ODBC SQL type constants (from sql.h)
+#ifndef SQL_C_CHAR
+#define SQL_C_CHAR 1
+#endif
+
+#ifndef SQL_VARCHAR
+#define SQL_VARCHAR 12
+#endif
 
 namespace databricks
 {
@@ -135,11 +148,45 @@ namespace databricks
         bool is_configured() const;
 
         /**
-         * @brief Execute a SQL query against Databricks
-         * @param sql The SQL query to execute
-         * @return Results as a 2D vector of strings (rows and columns)
+         * @brief Parameter for parameterized queries
          */
-        std::vector<std::vector<std::string>> query(const std::string& sql);
+        struct Parameter
+        {
+            std::string value;                  ///< Parameter value as string
+            SQLSMALLINT c_type = SQL_C_CHAR;   ///< C data type (default: character)
+            SQLSMALLINT sql_type = SQL_VARCHAR; ///< SQL data type (default: VARCHAR)
+        };
+
+        /**
+         * @brief Execute a SQL query against Databricks
+         *
+         * This method supports both static queries and parameterized queries for security.
+         *
+         * **Static Query (no parameters):**
+         * @code
+         * auto results = client.query("SELECT * FROM my_table LIMIT 10");
+         * @endcode
+         *
+         * **Parameterized Query (RECOMMENDED for dynamic values):**
+         * Use placeholders (?) and provide parameters to prevent SQL injection:
+         * @code
+         * auto results = client.query(
+         *     "SELECT * FROM users WHERE id = ? AND name = ?",
+         *     {{"123"}, {"John"}}
+         * );
+         * @endcode
+         *
+         * @param sql The SQL query to execute (use ? for parameter placeholders)
+         * @param params Optional vector of parameter values (default: empty = static query)
+         * @return Results as a 2D vector of strings (rows and columns)
+         *
+         * @warning When using dynamic values (user input, variables), always use parameters
+         *          to prevent SQL injection attacks. Never concatenate strings into SQL.
+         */
+        std::vector<std::vector<std::string>> query(
+            const std::string& sql,
+            const std::vector<Parameter>& params = {}
+        );
 
         /**
          * @brief Explicitly establish connection to Databricks

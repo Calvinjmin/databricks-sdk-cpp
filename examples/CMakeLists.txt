@@ -4,6 +4,9 @@
 add_executable(simple_query basic/simple_query.cpp)
 target_link_libraries(simple_query PRIVATE databricks_sdk)
 
+add_executable(secure_query basic/secure_query.cpp)
+target_link_libraries(secure_query PRIVATE databricks_sdk)
+
 # ========== Connection Pooling Examples ==========
 add_executable(transparent_pooling pooling/transparent_pooling.cpp)
 target_link_libraries(transparent_pooling PRIVATE databricks_sdk)
@@ -21,6 +24,7 @@ target_link_libraries(pool_async_combined PRIVATE databricks_sdk)
 # Set RPATH for all examples to find ODBC libraries
 set_target_properties(
     simple_query
+    secure_query
     transparent_pooling
     benchmark
     async_operations

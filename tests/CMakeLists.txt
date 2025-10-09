@@ -21,6 +21,7 @@ add_executable(unit_tests
     unit/test_client.cpp
     unit/test_config.cpp
     unit/test_connection_pool.cpp
+    unit/test_sql_injection.cpp
 )
 
 target_link_libraries(unit_tests
