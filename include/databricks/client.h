@@ -27,6 +27,9 @@ namespace databricks
             std::string http_path;    ///< HTTP path for SQL warehouse/cluster
             int timeout_seconds = 60; ///< Request timeout in seconds
 
+            // ODBC driver configuration
+            std::string odbc_driver_name = "Simba Spark ODBC Driver"; ///< ODBC driver name (default: Simba Spark ODBC Driver)
+
             // Connection pooling settings (optional performance optimization)
             bool enable_pooling = false;        ///< Enable connection pooling (default: false)
             size_t pool_min_connections = 1;    ///< Minimum connections in pool (default: 1)

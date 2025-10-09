@@ -19,27 +19,37 @@ if(WIN32)
     # Windows uses odbc32
     set(ODBC_LIBRARIES odbc32)
 else()
-    # Unix/Linux/macOS uses unixODBC
-    # Check for ARM64 Homebrew path first (Apple Silicon)
-    if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        set(ODBC_INCLUDE_DIR /opt/homebrew/include)
-        set(ODBC_LIBRARY /opt/homebrew/lib/libodbc.dylib)
-    else()
-        find_path(ODBC_INCLUDE_DIR sql.h
-            PATHS /usr/include /usr/local/include /opt/homebrew/include
-            PATH_SUFFIXES odbc)
-        find_library(ODBC_LIBRARY
-            NAMES odbc iodbc unixodbc
-            PATHS /usr/lib /usr/local/lib /opt/homebrew/lib)
-    endif()
+    # Unix/Linux/macOS uses unixODBC or iODBC
+    # Try to find ODBC using standard search paths
+    find_path(ODBC_INCLUDE_DIR sql.h
+        PATHS
+            /usr/include
+            /usr/local/include
+            /opt/homebrew/include
+            /opt/local/include
+        PATH_SUFFIXES odbc)
+
+    find_library(ODBC_LIBRARY
+        NAMES odbc iodbc unixodbc
+        PATHS
+            /usr/lib
+            /usr/local/lib
+            /opt/homebrew/lib
+            /opt/local/lib)
 
     if(ODBC_LIBRARY)
         set(ODBC_LIBRARIES ${ODBC_LIBRARY})
+        message(STATUS "Found ODBC library: ${ODBC_LIBRARY}")
         if(ODBC_INCLUDE_DIR)
             set(ODBC_INCLUDE_DIRS ${ODBC_INCLUDE_DIR})
+            message(STATUS "Found ODBC include: ${ODBC_INCLUDE_DIR}")
         endif()
     else()
-        message(FATAL_ERROR "ODBC library not found. Please install unixODBC development package.")
+        message(FATAL_ERROR
+            "ODBC library not found. Please install the ODBC driver manager:\n"
+            "  macOS:   brew install unixodbc\n"
+            "  Linux:   sudo apt-get install unixodbc-dev (Debian/Ubuntu)\n"
+            "           sudo yum install unixODBC-devel (RedHat/CentOS)")
     endif()
 endif()
 
@@ -81,9 +91,17 @@ set_target_properties(databricks_sdk PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
     PUBLIC_HEADER "${HEADERS}"
-    BUILD_RPATH "/opt/homebrew/lib;/usr/local/lib"
-    INSTALL_RPATH "/opt/homebrew/lib;/usr/local/lib"
 )
+
+# Set RPATH for finding ODBC libraries at runtime (Unix/Linux/macOS only)
+if(NOT WIN32)
+    # Use RPATH to find shared libraries relative to executable
+    set_target_properties(databricks_sdk PROPERTIES
+        BUILD_RPATH "${ODBC_LIBRARY_DIR};/usr/local/lib;/opt/homebrew/lib;/opt/local/lib"
+        INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;/usr/local/lib;/opt/homebrew/lib;/opt/local/lib"
+        INSTALL_RPATH_USE_LINK_PATH TRUE
+    )
+endif()
 
 # Compiler warnings
 if(MSVC)

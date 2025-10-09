@@ -196,14 +196,9 @@ namespace databricks
             }
 
             // Non-pooled client: allocate dedicated ODBC connection
-            #ifndef _WIN32
-            // Set ODBC environment variables for driver discovery
-            setenv("ODBCSYSINI", "/opt/homebrew/etc", 1);
-            setenv("ODBCINI", "/opt/homebrew/etc/odbc.ini", 1);
-
-            // Set library path for Simba driver to find unixODBC libraries
-            setenv("DYLD_LIBRARY_PATH", "/opt/homebrew/lib:/usr/local/lib", 1);
-            #endif
+            // Note: ODBC driver manager (unixODBC) will use the system's configured
+            // odbcinst.ini and odbc.ini files. Users should configure these properly
+            // or set ODBCSYSINI/ODBCINI environment variables before running.
 
             // Allocate environment handle
             SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
@@ -276,7 +271,7 @@ namespace databricks
 
             // Build connection string (pre-cache for performance)
             std::ostringstream connStr;
-            connStr << "Driver=Simba Spark ODBC Driver;"
+            connStr << "Driver=" << config.odbc_driver_name << ";"
                     << "Host=" << host << ";"
                     << "Port=443;"
                     << "HTTPPath=" << config.http_path << ";"
@@ -289,12 +284,56 @@ namespace databricks
             return connStr.str();
         }
 
+        bool validate_driver_exists()
+        {
+            SQLHSTMT hstmt = SQL_NULL_HSTMT;
+            SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
+            if (!SQL_SUCCEEDED(ret))
+            {
+                return false;
+            }
+
+            SQLCHAR driver[256];
+            SQLCHAR attributes[256];
+            SQLSMALLINT driver_len, attr_len;
+            SQLUSMALLINT direction = SQL_FETCH_FIRST;
+
+            while (SQL_SUCCEEDED(SQLDrivers(henv, direction, driver, sizeof(driver), &driver_len,
+                                           attributes, sizeof(attributes), &attr_len)))
+            {
+                std::string driver_name(reinterpret_cast<char*>(driver));
+                if (driver_name == config.odbc_driver_name)
+                {
+                    SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+                    return true;
+                }
+                direction = SQL_FETCH_NEXT;
+            }
+
+            SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+            return false;
+        }
+
         void connect()
         {
             std::lock_guard<std::mutex> lock(connection_mutex);
 
             if (connected)
                 return;
+
+            // Validate driver exists before attempting connection
+            if (!validate_driver_exists())
+            {
+                throw std::runtime_error(
+                    "ODBC driver '" + config.odbc_driver_name + "' not found.\n\n"
+                    "To fix this issue:\n"
+                    "1. Download and install the Simba Spark ODBC Driver from:\n"
+                    "   https://www.databricks.com/spark/odbc-drivers-download\n\n"
+                    "2. Verify installation with: odbcinst -q -d\n\n"
+                    "3. If using a different driver, set config.odbc_driver_name to match\n"
+                    "   the driver name shown in odbcinst output.\n"
+                );
+            }
 
             // Use cached connection string if available, otherwise build it
             std::string connString = cached_connection_string.empty()

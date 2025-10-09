@@ -8,6 +8,70 @@ A C++ SDK for Databricks, providing an interface for interacting with Databricks
 
 - C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
 - CMake 3.14 or higher
+- **ODBC Driver Manager**:
+  - **Linux/macOS**: unixODBC (`brew install unixodbc` or `apt-get install unixodbc-dev`)
+  - **Windows**: Built-in ODBC Driver Manager
+- **Simba Spark ODBC Driver**: [Download from Databricks](https://www.databricks.com/spark/odbc-drivers-download)
+
+### ODBC Driver Setup
+
+After installing the requirements above, you need to configure the ODBC driver:
+
+#### Linux/macOS
+
+1. **Install unixODBC** (if not already installed):
+   ```bash
+   # macOS
+   brew install unixodbc
+
+   # Ubuntu/Debian
+   sudo apt-get install unixodbc unixodbc-dev
+
+   # RedHat/CentOS
+   sudo yum install unixODBC unixODBC-devel
+   ```
+
+2. **Download and install Simba Spark ODBC Driver** from [Databricks Downloads](https://www.databricks.com/spark/odbc-drivers-download)
+
+3. **Verify driver installation**:
+   ```bash
+   odbcinst -q -d
+   ```
+   You should see "Simba Spark ODBC Driver" in the output.
+
+4. **If driver is not found**, check ODBC configuration locations:
+   ```bash
+   odbcinst -j
+   ```
+   Ensure the driver is registered in the `odbcinst.ini` file shown.
+
+#### Windows
+
+1. Download and run the Simba Spark ODBC Driver installer from [Databricks Downloads](https://www.databricks.com/spark/odbc-drivers-download)
+2. The installer will automatically register the driver with Windows ODBC Driver Manager
+
+#### Using Alternative ODBC Drivers
+
+If you prefer to use a different ODBC driver, you can configure it:
+
+```cpp
+databricks::Client::Config config;
+config.odbc_driver_name = "Your Driver Name Here"; // Must match driver name from odbcinst -q -d
+```
+
+### Automated Setup Check
+
+Run the setup checker script to verify your ODBC configuration:
+
+```bash
+./scripts/check_odbc_setup.sh
+```
+
+This will verify:
+- unixODBC installation
+- ODBC configuration files
+- Installed ODBC drivers (including Simba Spark)
+- Library paths
 
 ## Building
 
