@@ -16,21 +16,25 @@ FetchContent_MakeAvailable(googletest)
 # Enable testing
 enable_testing()
 
-# ========== Unit Tests (Google Test) ==========
+# ========== Unit Tests (Google Test with GMock) ==========
 add_executable(unit_tests
     unit/test_client.cpp
+    unit/test_config.cpp
+    unit/test_connection_pool.cpp
 )
 
 target_link_libraries(unit_tests
     PRIVATE
         databricks_sdk
         GTest::gtest_main
+        GTest::gmock_main
 )
 
 target_include_directories(unit_tests
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../include
         ${CMAKE_CURRENT_SOURCE_DIR}/helpers
+        ${CMAKE_CURRENT_SOURCE_DIR}/mocks
 )
 
 # Discover and register Google Test cases
