@@ -8,6 +8,70 @@ A C++ SDK for Databricks, providing an interface for interacting with Databricks
 
 - C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
 - CMake 3.14 or higher
+- **ODBC Driver Manager**:
+  - **Linux/macOS**: unixODBC (`brew install unixodbc` or `apt-get install unixodbc-dev`)
+  - **Windows**: Built-in ODBC Driver Manager
+- **Simba Spark ODBC Driver**: [Download from Databricks](https://www.databricks.com/spark/odbc-drivers-download)
+
+### ODBC Driver Setup
+
+After installing the requirements above, you need to configure the ODBC driver:
+
+#### Linux/macOS
+
+1. **Install unixODBC** (if not already installed):
+   ```bash
+   # macOS
+   brew install unixodbc
+
+   # Ubuntu/Debian
+   sudo apt-get install unixodbc unixodbc-dev
+
+   # RedHat/CentOS
+   sudo yum install unixODBC unixODBC-devel
+   ```
+
+2. **Download and install Simba Spark ODBC Driver** from [Databricks Downloads](https://www.databricks.com/spark/odbc-drivers-download)
+
+3. **Verify driver installation**:
+   ```bash
+   odbcinst -q -d
+   ```
+   You should see "Simba Spark ODBC Driver" in the output.
+
+4. **If driver is not found**, check ODBC configuration locations:
+   ```bash
+   odbcinst -j
+   ```
+   Ensure the driver is registered in the `odbcinst.ini` file shown.
+
+#### Windows
+
+1. Download and run the Simba Spark ODBC Driver installer from [Databricks Downloads](https://www.databricks.com/spark/odbc-drivers-download)
+2. The installer will automatically register the driver with Windows ODBC Driver Manager
+
+#### Using Alternative ODBC Drivers
+
+If you prefer to use a different ODBC driver, you can configure it:
+
+```cpp
+databricks::Client::Config config;
+config.odbc_driver_name = "Your Driver Name Here"; // Must match driver name from odbcinst -q -d
+```
+
+### Automated Setup Check
+
+Run the setup checker script to verify your ODBC configuration:
+
+```bash
+./scripts/check_odbc_setup.sh
+```
+
+This will verify:
+- unixODBC installation
+- ODBC configuration files
+- Installed ODBC drivers (including Simba Spark)
+- Library paths
 
 ## Building
 
@@ -38,13 +102,75 @@ cmake -DBUILD_EXAMPLES=ON -DBUILD_TESTS=ON ..
 
 ## Quick Start
 
-### Basic Usage
+### Configuration
+
+The SDK supports multiple ways to configure credentials and connection details, with profile files taking precedence over environment variables.
+
+#### Option 1: Automatic Configuration (Recommended)
+
+The SDK automatically loads configuration from `~/.databrickscfg` or environment variables:
 
 ```cpp
 #include <databricks/client.h>
 
 int main() {
-    // Configure the client
+    // Load from ~/.databrickscfg or environment variables
+    auto config = databricks::Client::Config::from_environment();
+    
+    databricks::Client client(config);
+    auto results = client.query("SELECT * FROM my_table LIMIT 10");
+    
+    return 0;
+}
+```
+
+**Configuration Precedence** (highest to lowest):
+1. Profile file (`~/.databrickscfg` with `[DEFAULT]` section) - if complete, used exclusively
+2. Environment variables (`DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `DATABRICKS_HTTP_PATH`) - only as fallback
+
+#### Option 2: Profile File
+
+Create `~/.databrickscfg`:
+
+```ini
+[DEFAULT]
+host = https://my-workspace.databricks.com
+token = dapi1234567890abcdef
+http_path = /sql/1.0/warehouses/abc123
+# Alternative key name also supported:
+# sql_http_path = /sql/1.0/warehouses/abc123
+
+[production]
+host = https://prod.databricks.com
+token = dapi_prod_token
+http_path = /sql/1.0/warehouses/prod123
+```
+
+Load specific profile:
+
+```cpp
+auto config = databricks::Client::Config::from_environment("production");
+```
+
+#### Option 3: Environment Variables Only
+
+```bash
+export DATABRICKS_HOST="https://my-workspace.databricks.com"
+export DATABRICKS_TOKEN="dapi1234567890abcdef"
+export DATABRICKS_HTTP_PATH="/sql/1.0/warehouses/abc123"
+export DATABRICKS_TIMEOUT=120  # Optional
+
+# Alternative variable names also supported:
+# DATABRICKS_SERVER_HOSTNAME, DATABRICKS_ACCESS_TOKEN, DATABRICKS_SQL_HTTP_PATH
+```
+
+#### Option 4: Manual Configuration
+
+```cpp
+#include <databricks/client.h>
+
+int main() {
+    // Configure manually
     databricks::Client::Config config;
     config.host = "https://my-workspace.databricks.com";
     config.token = "dapi1234567890abcdef";
@@ -133,18 +259,30 @@ target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
 Add the include directory and link against the library:
 
 ```cmake
-target_include_directories(my_app PRIVATE /path/to/databricks-sdk-c++/include)
+target_include_directories(my_app PRIVATE /path/to/databricks-sdk-cpp/include)
 target_link_libraries(my_app PRIVATE databricks_sdk)
 ```
 
 ## Running Examples
 
-### Setup Environment Variables
+### Setup Configuration
 
-All examples use environment variables for configuration (no hardcoded credentials):
+Examples automatically load configuration from either:
+
+**Option A: Profile File** (recommended for development)
+
+Create `~/.databrickscfg`:
+```ini
+[DEFAULT]
+host = https://your-workspace.databricks.com
+token = your_databricks_token
+http_path = /sql/1.0/warehouses/your_warehouse_id
+# or: sql_http_path = /sql/1.0/warehouses/your_warehouse_id
+```
+
+**Option B: Environment Variables** (recommended for CI/CD)
 
 ```bash
-# Edit .env with your credentials
 export DATABRICKS_HOST="https://your-workspace.databricks.com"
 export DATABRICKS_TOKEN="your_databricks_token"
 export DATABRICKS_HTTP_PATH="/sql/1.0/warehouses/your_warehouse_id"
@@ -154,6 +292,8 @@ Or source a .env file:
 ```bash
 set -a; source .env; set +a
 ```
+
+**Note**: Profile configuration takes priority. Environment variables are used only as a fallback when no profile is configured.
 
 ### Run Examples
 

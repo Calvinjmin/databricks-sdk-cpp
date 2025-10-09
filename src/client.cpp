@@ -8,6 +8,7 @@
 #include <future>
 #include <mutex>
 #include <functional>
+#include <fstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -36,6 +37,129 @@ namespace databricks
                token == other.token &&
                http_path == other.http_path &&
                timeout_seconds == other.timeout_seconds;
+    }
+
+    bool Client::Config::load_profile_config(const std::string& profile) {
+        const char* home = std::getenv("HOME");
+        if (!home) return false;
+
+        std::ifstream file(std::string(home) + "/.databrickscfg");
+        if (!file.is_open()) return false;
+
+        std::string line;
+        bool in_profile = false;
+
+        while (std::getline(file, line)) {
+            // Trim whitespace
+            auto start = line.find_first_not_of(" \t");
+            if (start == std::string::npos) continue;
+            auto end = line.find_last_not_of(" \t");
+            line = line.substr(start, end - start + 1);
+
+            if (line.empty() || line[0] == '#') continue;
+
+            if (line.front() == '[' && line.back() == ']') {
+                in_profile = (line.substr(1, line.size() - 2) == profile);
+                continue;
+            }
+
+            if (!in_profile) continue;
+
+            auto pos = line.find('=');
+            if (pos == std::string::npos) continue;
+
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
+
+            // Trim key/value
+            key.erase(0, key.find_first_not_of(" \t"));
+            key.erase(key.find_last_not_of(" \t") + 1);
+            value.erase(0, value.find_first_not_of(" \t"));
+            value.erase(value.find_last_not_of(" \t") + 1);
+
+            if (key == "host") host = value;
+            else if (key == "token") token = value;
+            else if (key == "http_path" || key == "sql_http_path") http_path = value;
+        }
+
+        return !host.empty() && !token.empty() && !http_path.empty();
+    }
+
+    bool Client::Config::load_from_env() {
+        bool found_all_required = true;
+
+        // Load host
+        const char* host_env = std::getenv("DATABRICKS_HOST");
+        if (!host_env) host_env = std::getenv("DATABRICKS_SERVER_HOSTNAME");
+        if (host_env) {
+            host = host_env;
+        } else {
+            found_all_required = false;
+        }
+
+        // Load token
+        const char* token_env = std::getenv("DATABRICKS_TOKEN");
+        if (!token_env) token_env = std::getenv("DATABRICKS_ACCESS_TOKEN");
+        if (token_env) {
+            token = token_env;
+        } else {
+            found_all_required = false;
+        }
+
+        // Load HTTP path
+        const char* http_path_env = std::getenv("DATABRICKS_HTTP_PATH");
+        if (!http_path_env) http_path_env = std::getenv("DATABRICKS_SQL_HTTP_PATH");
+        if (http_path_env) {
+            http_path = http_path_env;
+        } else {
+            found_all_required = false;
+        }
+
+        // Load optional timeout
+        const char* timeout_env = std::getenv("DATABRICKS_TIMEOUT");
+        if (timeout_env) {
+            timeout_seconds = std::atoi(timeout_env);
+        }
+
+        return found_all_required;
+    }
+
+    Client::Config Client::Config::from_environment(const std::string& profile) {
+        Config config;
+
+        // First, try to load from profile - if successful, use it and stop
+        bool profile_loaded = config.load_profile_config(profile);
+        if (profile_loaded) {
+            // Profile has all required configs, use it exclusively
+            return config;
+        }
+
+        // Profile failed or incomplete, fall back to environment variables
+        const char* host_env = std::getenv("DATABRICKS_HOST");
+        if (!host_env) host_env = std::getenv("DATABRICKS_SERVER_HOSTNAME");
+        if (host_env) config.host = host_env;
+
+        const char* token_env = std::getenv("DATABRICKS_TOKEN");
+        if (!token_env) token_env = std::getenv("DATABRICKS_ACCESS_TOKEN");
+        if (token_env) config.token = token_env;
+
+        const char* http_path_env = std::getenv("DATABRICKS_HTTP_PATH");
+        if (!http_path_env) http_path_env = std::getenv("DATABRICKS_SQL_HTTP_PATH");
+        if (http_path_env) config.http_path = http_path_env;
+
+        const char* timeout_env = std::getenv("DATABRICKS_TIMEOUT");
+        if (timeout_env) config.timeout_seconds = std::atoi(timeout_env);
+
+        // Validate that we have all required fields from env vars
+        if (config.host.empty() || config.token.empty() || config.http_path.empty()) {
+            throw std::runtime_error(
+                "Failed to load Databricks configuration. Ensure either:\n"
+                "  1. ~/.databrickscfg has a [" + profile + "] section with host, token, and http_path/sql_http_path, OR\n"
+                "  2. Environment variables are set: DATABRICKS_HOST, DATABRICKS_TOKEN, and DATABRICKS_HTTP_PATH"
+            );
+        }
+
+        return config;
     }
 
     // ========== Client::Impl ==========
@@ -72,14 +196,9 @@ namespace databricks
             }
 
             // Non-pooled client: allocate dedicated ODBC connection
-            #ifndef _WIN32
-            // Set ODBC environment variables for driver discovery
-            setenv("ODBCSYSINI", "/opt/homebrew/etc", 1);
-            setenv("ODBCINI", "/opt/homebrew/etc/odbc.ini", 1);
-
-            // Set library path for Simba driver to find unixODBC libraries
-            setenv("DYLD_LIBRARY_PATH", "/opt/homebrew/lib:/usr/local/lib", 1);
-            #endif
+            // Note: ODBC driver manager (unixODBC) will use the system's configured
+            // odbcinst.ini and odbc.ini files. Users should configure these properly
+            // or set ODBCSYSINI/ODBCINI environment variables before running.
 
             // Allocate environment handle
             SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
@@ -152,7 +271,7 @@ namespace databricks
 
             // Build connection string (pre-cache for performance)
             std::ostringstream connStr;
-            connStr << "Driver=Simba Spark ODBC Driver;"
+            connStr << "Driver=" << config.odbc_driver_name << ";"
                     << "Host=" << host << ";"
                     << "Port=443;"
                     << "HTTPPath=" << config.http_path << ";"
@@ -165,12 +284,56 @@ namespace databricks
             return connStr.str();
         }
 
+        bool validate_driver_exists()
+        {
+            SQLHSTMT hstmt = SQL_NULL_HSTMT;
+            SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
+            if (!SQL_SUCCEEDED(ret))
+            {
+                return false;
+            }
+
+            SQLCHAR driver[256];
+            SQLCHAR attributes[256];
+            SQLSMALLINT driver_len, attr_len;
+            SQLUSMALLINT direction = SQL_FETCH_FIRST;
+
+            while (SQL_SUCCEEDED(SQLDrivers(henv, direction, driver, sizeof(driver), &driver_len,
+                                           attributes, sizeof(attributes), &attr_len)))
+            {
+                std::string driver_name(reinterpret_cast<char*>(driver));
+                if (driver_name == config.odbc_driver_name)
+                {
+                    SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+                    return true;
+                }
+                direction = SQL_FETCH_NEXT;
+            }
+
+            SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+            return false;
+        }
+
         void connect()
         {
             std::lock_guard<std::mutex> lock(connection_mutex);
 
             if (connected)
                 return;
+
+            // Validate driver exists before attempting connection
+            if (!validate_driver_exists())
+            {
+                throw std::runtime_error(
+                    "ODBC driver '" + config.odbc_driver_name + "' not found.\n\n"
+                    "To fix this issue:\n"
+                    "1. Download and install the Simba Spark ODBC Driver from:\n"
+                    "   https://www.databricks.com/spark/odbc-drivers-download\n\n"
+                    "2. Verify installation with: odbcinst -q -d\n\n"
+                    "3. If using a different driver, set config.odbc_driver_name to match\n"
+                    "   the driver name shown in odbcinst output.\n"
+                );
+            }
 
             // Use cached connection string if available, otherwise build it
             std::string connString = cached_connection_string.empty()

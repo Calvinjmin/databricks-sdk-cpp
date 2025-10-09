@@ -8,14 +8,15 @@
  */
 int main() {
     try {
-        // Load configuration from environment variables
-        auto config = examples::load_config_from_env();
+        // Load configuration from profile or environment variables
+        // Precedence: profile takes priority, env vars are fallback
+        auto config = examples::load_config();
         
         // Create a configured client
         databricks::Client client(config);
 
         std::cout << "Connected to Databricks" << std::endl;
-        std::cout << "Using Connection Pool: " << (client.is_configured() ? "Yes" : "No") << std::endl;
+        std::cout << "Using Connection Pool: " << (config.enable_pooling ? "Yes" : "No") << std::endl;
         std::cout << std::endl;
 
         // Execute a simple query

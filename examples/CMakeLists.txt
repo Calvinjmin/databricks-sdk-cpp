@@ -26,6 +26,6 @@ set_target_properties(
     async_operations
     pool_async_combined
     PROPERTIES
-    BUILD_RPATH "/opt/homebrew/lib;/usr/local/lib"
+    BUILD_RPATH "${CMAKE_BINARY_DIR};/opt/homebrew/lib;/usr/local/lib"
     INSTALL_RPATH "/opt/homebrew/lib;/usr/local/lib"
 )
