@@ -55,8 +55,13 @@ After installing the requirements above, you need to configure the ODBC driver:
 If you prefer to use a different ODBC driver, you can configure it:
 
 ```cpp
-databricks::Client::Config config;
-config.odbc_driver_name = "Your Driver Name Here"; // Must match driver name from odbcinst -q -d
+databricks::SQLConfig sql;
+sql.odbc_driver_name = "Your Driver Name Here"; // Must match driver name from odbcinst -q -d
+
+auto client = databricks::Client::Builder()
+    .with_environment_config()
+    .with_sql(sql)
+    .build();
 ```
 
 ### Automated Setup Check
@@ -100,69 +105,24 @@ Example:
 cmake -DBUILD_EXAMPLES=ON -DBUILD_TESTS=ON ..
 ```
 
-## Security: Preventing SQL Injection
-
-⚠️ **IMPORTANT**: Always use parameterized queries when incorporating user input or dynamic values.
-
-### Secure Query Execution
-
-The `query()` method supports both static and parameterized queries. Use parameters to prevent SQL injection:
-
-```cpp
-#include <databricks/client.h>
-
-int main() {
-    databricks::Client client(config);
-
-    // SECURE: Parameterized query with user input
-    std::string user_input = get_user_input();
-    auto results = client.query(
-        "SELECT * FROM users WHERE id = ?",
-        {{user_input}}  // Parameters are safely escaped
-    );
-
-    // ALSO SAFE: Static query without user input
-    auto all_users = client.query("SELECT * FROM users LIMIT 10");
-
-    return 0;
-}
-```
-
-### Multiple Parameters
-
-```cpp
-// Multiple parameters - order matches placeholders
-auto results = client.query(
-    "SELECT * FROM users WHERE name = ? AND age > ?",
-    {{"John"}, {"25"}}
-);
-```
-
-### ❌ UNSAFE Pattern (Never Do This)
-
-```cpp
-// VULNERABLE to SQL injection - DON'T DO THIS!
-std::string user_input = get_user_input();
-std::string sql = "SELECT * FROM users WHERE id = '" + user_input + "'";
-auto results = client.query(sql);  // DANGEROUS - no parameters!
-```
-
-**Why it's dangerous**: Malicious input like `'; DROP TABLE users; --` would execute arbitrary SQL.
-
-### Security Best Practices
-
-1. **Use parameters** for any dynamic values (user input, variables, etc.)
-2. **Static queries only** when SQL contains no dynamic values
-3. **Never concatenate** user input into SQL strings
-4. **Validate identifiers** (table/column names) separately - they cannot be parameterized
-
-For a complete example, see `examples/basic/secure_query.cpp`.
-
 ## Quick Start
 
 ### Configuration
 
-The SDK supports multiple ways to configure credentials and connection details, with profile files taking precedence over environment variables.
+The SDK uses a modular configuration system with separate concerns for authentication, SQL settings, and connection pooling. The Builder pattern provides a clean API for constructing clients.
+
+#### Configuration Structure
+
+The SDK separates configuration into three distinct concerns:
+
+- **`AuthConfig`**: Core authentication (host, token, timeout) - shared across all Databricks features
+- **`SQLConfig`**: SQL-specific settings (http_path, ODBC driver name)
+- **`PoolingConfig`**: Optional connection pooling settings (enabled, min/max connections)
+
+This modular design allows you to:
+- Share `AuthConfig` across different Databricks service clients (SQL, Workspace, Delta, etc.)
+- Configure only what you need
+- Mix automatic and explicit configuration
 
 #### Option 1: Automatic Configuration (Recommended)
 
@@ -173,9 +133,10 @@ The SDK automatically loads configuration from `~/.databrickscfg` or environment
 
 int main() {
     // Load from ~/.databrickscfg or environment variables
-    auto config = databricks::Client::Config::from_environment();
+    auto client = databricks::Client::Builder()
+        .with_environment_config()
+        .build();
     
-    databricks::Client client(config);
     auto results = client.query("SELECT * FROM my_table LIMIT 10");
     
     return 0;
@@ -207,7 +168,9 @@ http_path = /sql/1.0/warehouses/prod123
 Load specific profile:
 
 ```cpp
-auto config = databricks::Client::Config::from_environment("production");
+auto client = databricks::Client::Builder()
+    .with_environment_config("production")
+    .build();
 ```
 
 #### Option 3: Environment Variables Only
@@ -228,14 +191,22 @@ export DATABRICKS_TIMEOUT=120  # Optional
 #include <databricks/client.h>
 
 int main() {
-    // Configure manually
-    databricks::Client::Config config;
-    config.host = "https://my-workspace.databricks.com";
-    config.token = "dapi1234567890abcdef";
-    config.http_path = "/sql/1.0/warehouses/abc123";
+    // Configure authentication
+    databricks::AuthConfig auth;
+    auth.host = "https://my-workspace.databricks.com";
+    auth.token = "dapi1234567890abcdef";
+    auth.timeout_seconds = 60;
 
-    // Create client (lazy connection - connects on first query)
-    databricks::Client client(config);
+    // Configure SQL settings
+    databricks::SQLConfig sql;
+    sql.http_path = "/sql/1.0/warehouses/abc123";
+    sql.odbc_driver_name = "Simba Spark ODBC Driver";
+
+    // Build client
+    auto client = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .build();
 
     // Execute a query
     auto results = client.query("SELECT * FROM my_table LIMIT 10");
@@ -250,13 +221,11 @@ int main() {
 #include <databricks/client.h>
 
 int main() {
-    databricks::Client::Config config;
-    config.host = "https://my-workspace.databricks.com";
-    config.token = "dapi1234567890abcdef";
-    config.http_path = "/sql/1.0/warehouses/abc123";
-
-    // Create client without auto-connect
-    databricks::Client client(config, false);
+    // Build client without auto-connecting
+    auto client = databricks::Client::Builder()
+        .with_environment_config()
+        .with_auto_connect(false)
+        .build();
 
     // Start connection asynchronously
     auto connect_future = client.connect_async();
@@ -277,18 +246,17 @@ int main() {
 #include <databricks/client.h>
 
 int main() {
-    databricks::Client::Config config;
-    config.host = "https://my-workspace.databricks.com";
-    config.token = "dapi1234567890abcdef";
-    config.http_path = "/sql/1.0/warehouses/abc123";
+    // Configure pooling
+    databricks::PoolingConfig pooling;
+    pooling.enabled = true;
+    pooling.min_connections = 2;
+    pooling.max_connections = 10;
 
-    // Enable pooling - that's it!
-    config.enable_pooling = true;
-    config.pool_min_connections = 2;
-    config.pool_max_connections = 10;
-
-    // Create client - pooling happens automatically
-    databricks::Client client(config);
+    // Build client with pooling
+    auto client = databricks::Client::Builder()
+        .with_environment_config()
+        .with_pooling(pooling)
+        .build();
 
     // Query as usual - connections acquired/released automatically
     auto results = client.query("SELECT * FROM my_table");
@@ -298,6 +266,57 @@ int main() {
 ```
 
 **Note**: Multiple Clients with the same config automatically share the same pool!
+
+### Mixing Configuration Approaches
+
+The Builder pattern allows you to mix automatic and explicit configuration:
+
+```cpp
+// Load auth from environment, but customize pooling
+databricks::PoolingConfig pooling;
+pooling.enabled = true;
+pooling.max_connections = 20;
+
+auto client = databricks::Client::Builder()
+    .with_environment_config()  // Load auth + SQL from environment
+    .with_pooling(pooling)       // Override pooling settings
+    .build();
+```
+
+Or load auth separately from SQL settings:
+
+```cpp
+// Load auth from profile, SQL from environment
+databricks::AuthConfig auth = databricks::AuthConfig::from_profile("production");
+
+databricks::SQLConfig sql;
+sql.http_path = std::getenv("CUSTOM_HTTP_PATH");
+
+auto client = databricks::Client::Builder()
+    .with_auth(auth)
+    .with_sql(sql)
+    .build();
+```
+
+### Accessing Configuration
+
+You can access the modular configuration from any client:
+
+```cpp
+auto client = databricks::Client::Builder()
+    .with_environment_config()
+    .build();
+
+// Access configuration
+const auto& auth = client.get_auth_config();
+const auto& sql = client.get_sql_config();
+const auto& pooling = client.get_pooling_config();
+
+std::cout << "Connected to: " << auth.host << std::endl;
+std::cout << "Using warehouse: " << sql.http_path << std::endl;
+```
+
+For a complete example, see `examples/basic/modular_config_example.cpp`.
 
 ## Using in Your Project
 
@@ -425,7 +444,7 @@ Async operations reduce perceived latency by performing work in the background:
 
 ### Best Practices
 
-1. **Enable pooling** via `config.enable_pooling = true` for applications making multiple queries
+1. **Enable pooling** via `PoolingConfig` for applications making multiple queries
 2. **Use async operations** when you can do other work while waiting
 3. **Combine both** for maximum performance in concurrent scenarios
 4. **Size pools appropriately**: min = typical concurrent load, max = peak load
@@ -440,8 +459,16 @@ For advanced users who need fine-grained control over connection pools:
 ```cpp
 #include <databricks/connection_pool.h>
 
+// Build config for pool
+databricks::AuthConfig auth;
+auth.host = "https://my-workspace.databricks.com";
+auth.token = "dapi1234567890abcdef";
+
+databricks::SQLConfig sql;
+sql.http_path = "/sql/1.0/warehouses/abc123";
+
 // Create and manage pool explicitly
-databricks::ConnectionPool pool(config, 2, 10);
+databricks::ConnectionPool pool(auth, sql, 2, 10);
 pool.warm_up();
 
 // Acquire connections manually
@@ -455,7 +482,7 @@ auto stats = pool.get_stats();
 std::cout << "Available: " << stats.available_connections << std::endl;
 ```
 
-**Note**: Most users should use `config.enable_pooling = true` instead of direct pool management.
+**Note**: Most users should use the Builder with `PoolingConfig` instead of direct pool management.
 
 ## Documentation
 
