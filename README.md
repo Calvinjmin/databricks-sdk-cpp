@@ -100,6 +100,64 @@ Example:
 cmake -DBUILD_EXAMPLES=ON -DBUILD_TESTS=ON ..
 ```
 
+## Security: Preventing SQL Injection
+
+⚠️ **IMPORTANT**: Always use parameterized queries when incorporating user input or dynamic values.
+
+### Secure Query Execution
+
+The `query()` method supports both static and parameterized queries. Use parameters to prevent SQL injection:
+
+```cpp
+#include <databricks/client.h>
+
+int main() {
+    databricks::Client client(config);
+
+    // SECURE: Parameterized query with user input
+    std::string user_input = get_user_input();
+    auto results = client.query(
+        "SELECT * FROM users WHERE id = ?",
+        {{user_input}}  // Parameters are safely escaped
+    );
+
+    // ALSO SAFE: Static query without user input
+    auto all_users = client.query("SELECT * FROM users LIMIT 10");
+
+    return 0;
+}
+```
+
+### Multiple Parameters
+
+```cpp
+// Multiple parameters - order matches placeholders
+auto results = client.query(
+    "SELECT * FROM users WHERE name = ? AND age > ?",
+    {{"John"}, {"25"}}
+);
+```
+
+### ❌ UNSAFE Pattern (Never Do This)
+
+```cpp
+// VULNERABLE to SQL injection - DON'T DO THIS!
+std::string user_input = get_user_input();
+std::string sql = "SELECT * FROM users WHERE id = '" + user_input + "'";
+auto results = client.query(sql);  // DANGEROUS - no parameters!
+```
+
+**Why it's dangerous**: Malicious input like `'; DROP TABLE users; --` would execute arbitrary SQL.
+
+### Security Best Practices
+
+1. **Use parameters** for any dynamic values (user input, variables, etc.)
+2. **Static queries only** when SQL contains no dynamic values
+3. **Never concatenate** user input into SQL strings
+4. **Validate identifiers** (table/column names) separately - they cannot be parameterized
+
+For a complete example, see `examples/basic/secure_query.cpp`.
+
 ## Quick Start
 
 ### Configuration
