@@ -169,6 +169,16 @@ namespace databricks
         bool is_configured() const;
 
         /**
+         * @brief Parameter for parameterized queries
+         */
+        struct Parameter
+        {
+            std::string value;                  ///< Parameter value as string
+            SQLSMALLINT c_type = SQL_C_CHAR;   ///< C data type (default: character)
+            SQLSMALLINT sql_type = SQL_VARCHAR; ///< SQL data type (default: VARCHAR)
+        };
+
+        /**
          * @brief Execute a SQL query against Databricks
          *
          * This method supports both static queries and parameterized queries for security.
