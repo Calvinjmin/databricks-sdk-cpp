@@ -4,11 +4,11 @@
 #include <iostream>
 #include <stdexcept>
 #include <sstream>
+#include <fstream>
 #include <cstdlib>
 #include <future>
 #include <mutex>
 #include <functional>
-#include <fstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -18,150 +18,6 @@
 
 namespace databricks
 {
-    // ========== Config Implementation ==========
-
-    size_t Client::Config::hash() const
-    {
-        // Simple hash combining relevant fields for pooling
-        std::hash<std::string> hasher;
-        size_t h = hasher(host);
-        h ^= hasher(token) << 1;
-        h ^= hasher(http_path) << 2;
-        h ^= std::hash<int>()(timeout_seconds) << 3;
-        return h;
-    }
-
-    bool Client::Config::equivalent_for_pooling(const Config &other) const
-    {
-        return host == other.host &&
-               token == other.token &&
-               http_path == other.http_path &&
-               timeout_seconds == other.timeout_seconds;
-    }
-
-    bool Client::Config::load_profile_config(const std::string& profile) {
-        const char* home = std::getenv("HOME");
-        if (!home) return false;
-
-        std::ifstream file(std::string(home) + "/.databrickscfg");
-        if (!file.is_open()) return false;
-
-        std::string line;
-        bool in_profile = false;
-
-        while (std::getline(file, line)) {
-            // Trim whitespace
-            auto start = line.find_first_not_of(" \t");
-            if (start == std::string::npos) continue;
-            auto end = line.find_last_not_of(" \t");
-            line = line.substr(start, end - start + 1);
-
-            if (line.empty() || line[0] == '#') continue;
-
-            if (line.front() == '[' && line.back() == ']') {
-                in_profile = (line.substr(1, line.size() - 2) == profile);
-                continue;
-            }
-
-            if (!in_profile) continue;
-
-            auto pos = line.find('=');
-            if (pos == std::string::npos) continue;
-
-            std::string key = line.substr(0, pos);
-            std::string value = line.substr(pos + 1);
-
-            // Trim key/value
-            key.erase(0, key.find_first_not_of(" \t"));
-            key.erase(key.find_last_not_of(" \t") + 1);
-            value.erase(0, value.find_first_not_of(" \t"));
-            value.erase(value.find_last_not_of(" \t") + 1);
-
-            if (key == "host") host = value;
-            else if (key == "token") token = value;
-            else if (key == "http_path" || key == "sql_http_path") http_path = value;
-        }
-
-        return !host.empty() && !token.empty() && !http_path.empty();
-    }
-
-    bool Client::Config::load_from_env() {
-        bool found_all_required = true;
-
-        // Load host
-        const char* host_env = std::getenv("DATABRICKS_HOST");
-        if (!host_env) host_env = std::getenv("DATABRICKS_SERVER_HOSTNAME");
-        if (host_env) {
-            host = host_env;
-        } else {
-            found_all_required = false;
-        }
-
-        // Load token
-        const char* token_env = std::getenv("DATABRICKS_TOKEN");
-        if (!token_env) token_env = std::getenv("DATABRICKS_ACCESS_TOKEN");
-        if (token_env) {
-            token = token_env;
-        } else {
-            found_all_required = false;
-        }
-
-        // Load HTTP path
-        const char* http_path_env = std::getenv("DATABRICKS_HTTP_PATH");
-        if (!http_path_env) http_path_env = std::getenv("DATABRICKS_SQL_HTTP_PATH");
-        if (http_path_env) {
-            http_path = http_path_env;
-        } else {
-            found_all_required = false;
-        }
-
-        // Load optional timeout
-        const char* timeout_env = std::getenv("DATABRICKS_TIMEOUT");
-        if (timeout_env) {
-            timeout_seconds = std::atoi(timeout_env);
-        }
-
-        return found_all_required;
-    }
-
-    Client::Config Client::Config::from_environment(const std::string& profile) {
-        Config config;
-
-        // First, try to load from profile - if successful, use it and stop
-        bool profile_loaded = config.load_profile_config(profile);
-        if (profile_loaded) {
-            // Profile has all required configs, use it exclusively
-            return config;
-        }
-
-        // Profile failed or incomplete, fall back to environment variables
-        const char* host_env = std::getenv("DATABRICKS_HOST");
-        if (!host_env) host_env = std::getenv("DATABRICKS_SERVER_HOSTNAME");
-        if (host_env) config.host = host_env;
-
-        const char* token_env = std::getenv("DATABRICKS_TOKEN");
-        if (!token_env) token_env = std::getenv("DATABRICKS_ACCESS_TOKEN");
-        if (token_env) config.token = token_env;
-
-        const char* http_path_env = std::getenv("DATABRICKS_HTTP_PATH");
-        if (!http_path_env) http_path_env = std::getenv("DATABRICKS_SQL_HTTP_PATH");
-        if (http_path_env) config.http_path = http_path_env;
-
-        const char* timeout_env = std::getenv("DATABRICKS_TIMEOUT");
-        if (timeout_env) config.timeout_seconds = std::atoi(timeout_env);
-
-        // Validate that we have all required fields from env vars
-        if (config.host.empty() || config.token.empty() || config.http_path.empty()) {
-            throw std::runtime_error(
-                "Failed to load Databricks configuration. Ensure either:\n"
-                "  1. ~/.databrickscfg has a [" + profile + "] section with host, token, and http_path/sql_http_path, OR\n"
-                "  2. Environment variables are set: DATABRICKS_HOST, DATABRICKS_TOKEN, and DATABRICKS_HTTP_PATH"
-            );
-        }
-
-        return config;
-    }
-
     // ========== Client::Impl ==========
 
     /**
@@ -170,7 +26,9 @@ namespace databricks
     class Client::Impl
     {
     public:
-        Config config;
+        AuthConfig auth;
+        SQLConfig sql;
+        PoolingConfig pooling;
         SQLHENV henv; // Environment handle
         SQLHDBC hdbc; // Connection handle
         bool connected;
@@ -179,15 +37,23 @@ namespace databricks
         std::future<void> async_connect_future; // Track async connection
         std::shared_ptr<ConnectionPool> pool; // Shared pool (if pooling enabled)
 
-        explicit Impl(const Config &cfg, bool auto_connect)
-            : config(cfg), henv(SQL_NULL_HENV), hdbc(SQL_NULL_HDBC), connected(false), pool(nullptr)
+        explicit Impl(const AuthConfig& auth_cfg, const SQLConfig& sql_cfg, const PoolingConfig& pool_cfg, bool auto_connect)
+            : auth(auth_cfg), sql(sql_cfg), pooling(pool_cfg),
+              henv(SQL_NULL_HENV), hdbc(SQL_NULL_HDBC), connected(false), pool(nullptr)
         {
+            // Validate configurations
+            if (!auth.is_valid()) {
+                throw std::runtime_error("Invalid AuthConfig: host, token, and timeout_seconds are required");
+            }
+            if (!sql.is_valid()) {
+                throw std::runtime_error("Invalid SQLConfig: http_path and odbc_driver_name are required");
+            }
+
             // If pooling is enabled, get/create shared pool and return early
-            // Pool-based clients don't maintain their own connection
-            if (config.enable_pooling)
+            if (pooling.enabled)
             {
-                pool = internal::PoolManager::instance().get_pool(config);
-                // Optionally warm up the pool asynchronously
+                pool = internal::PoolManager::instance().get_pool(auth, sql, pooling);
+
                 if (auto_connect)
                 {
                     pool->warm_up_async();
@@ -196,10 +62,6 @@ namespace databricks
             }
 
             // Non-pooled client: allocate dedicated ODBC connection
-            // Note: ODBC driver manager (unixODBC) will use the system's configured
-            // odbcinst.ini and odbc.ini files. Users should configure these properly
-            // or set ODBCSYSINI/ODBCINI environment variables before running.
-
             // Allocate environment handle
             SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
             if (!SQL_SUCCEEDED(ret))
@@ -223,19 +85,16 @@ namespace databricks
                 throw std::runtime_error("Failed to allocate ODBC connection handle");
             }
 
-            // Set connection timeouts for better performance
+            // Set connection timeouts
             SQLSetConnectAttr(hdbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)10, 0);
             SQLSetConnectAttr(hdbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)30, 0);
 
-            // Pre-build connection string if config is provided
-            if (!config.host.empty() && !config.token.empty() && !config.http_path.empty())
-            {
-                cached_connection_string = build_connection_string();
+            // Pre-build connection string
+            cached_connection_string = build_connection_string();
 
-                if (auto_connect)
-                {
-                    connect();
-                }
+            if (auto_connect)
+            {
+                connect();
             }
         }
 
@@ -262,22 +121,22 @@ namespace databricks
         std::string build_connection_string()
         {
             // Strip https:// or http:// from host if present
-            std::string host = config.host;
+            std::string host = auth.host;
             if (host.find("https://") == 0) {
                 host = host.substr(8);
             } else if (host.find("http://") == 0) {
                 host = host.substr(7);
             }
 
-            // Build connection string (pre-cache for performance)
+            // Build connection string
             std::ostringstream connStr;
-            connStr << "Driver=" << config.odbc_driver_name << ";"
+            connStr << "Driver=" << sql.odbc_driver_name << ";"
                     << "Host=" << host << ";"
                     << "Port=443;"
-                    << "HTTPPath=" << config.http_path << ";"
+                    << "HTTPPath=" << sql.http_path << ";"
                     << "AuthMech=3;"
                     << "UID=token;"
-                    << "PWD=" << config.token << ";"
+                    << "PWD=" << auth.token << ";"
                     << "SSL=1;"
                     << "ThriftTransport=2;";
 
@@ -296,7 +155,7 @@ namespace databricks
                                            attributes, sizeof(attributes), &attr_len)))
             {
                 std::string driver_name(reinterpret_cast<char*>(driver));
-                if (driver_name == config.odbc_driver_name)
+                if (driver_name == sql.odbc_driver_name)
                 {
                     return true;
                 }
@@ -317,20 +176,15 @@ namespace databricks
             if (!validate_driver_exists())
             {
                 throw std::runtime_error(
-                    "ODBC driver '" + config.odbc_driver_name + "' not found.\n\n"
+                    "ODBC driver '" + sql.odbc_driver_name + "' not found.\n\n"
                     "To fix this issue:\n"
                     "1. Download and install the Simba Spark ODBC Driver from:\n"
                     "   https://www.databricks.com/spark/odbc-drivers-download\n\n"
                     "2. Verify installation with: odbcinst -q -d\n\n"
-                    "3. If using a different driver, set config.odbc_driver_name to match\n"
+                    "3. If using a different driver, set sql_config.odbc_driver_name to match\n"
                     "   the driver name shown in odbcinst output.\n"
                 );
             }
-
-            // Use cached connection string if available, otherwise build it
-            std::string connString = cached_connection_string.empty()
-                ? build_connection_string()
-                : cached_connection_string;
 
             SQLCHAR outConnStr[1024];
             SQLSMALLINT outConnStrLen;
@@ -338,7 +192,7 @@ namespace databricks
             SQLRETURN ret = SQLDriverConnect(
                 hdbc,
                 NULL,
-                (SQLCHAR *)connString.c_str(),
+                (SQLCHAR *)cached_connection_string.c_str(),
                 SQL_NTS,
                 outConnStr,
                 sizeof(outConnStr),
@@ -399,24 +253,139 @@ namespace databricks
         }
     };
 
-    Client::Client()
-        : pimpl_(std::make_unique<Impl>(Config{}, false))
+    // ========== Builder Implementation ==========
+
+    Client::Builder::Builder() {}
+
+    Client::Builder& Client::Builder::with_auth(const AuthConfig& auth)
     {
+        auth_ = std::make_unique<AuthConfig>(auth);
+        return *this;
     }
 
-    Client::Client(const Config &config, bool auto_connect)
-        : pimpl_(std::make_unique<Impl>(config, auto_connect))
+    Client::Builder& Client::Builder::with_sql(const SQLConfig& sql)
+    {
+        sql_ = std::make_unique<SQLConfig>(sql);
+        return *this;
+    }
+
+    Client::Builder& Client::Builder::with_pooling(const PoolingConfig& pooling)
+    {
+        pooling_ = std::make_unique<PoolingConfig>(pooling);
+        return *this;
+    }
+
+    Client::Builder& Client::Builder::with_environment_config(const std::string& profile)
+    {
+        auto auth = AuthConfig::from_environment(profile);
+        auth_ = std::make_unique<AuthConfig>(auth);
+
+        // Try to load http_path from environment
+        SQLConfig sql;
+        const char* http_path_env = std::getenv("DATABRICKS_HTTP_PATH");
+        if (!http_path_env) http_path_env = std::getenv("DATABRICKS_SQL_HTTP_PATH");
+
+        if (!http_path_env) {
+            // Try to load from profile file
+            const char* home = std::getenv("HOME");
+            if (home) {
+                std::ifstream file(std::string(home) + "/.databrickscfg");
+                if (file.is_open()) {
+                    std::string line;
+                    bool in_profile_section = false;
+
+                    while (std::getline(file, line)) {
+                        auto start = line.find_first_not_of(" \t");
+                        if (start == std::string::npos) continue;
+                        auto end = line.find_last_not_of(" \t");
+                        line = line.substr(start, end - start + 1);
+
+                        if (line.empty() || line[0] == '#') continue;
+
+                        if (line.front() == '[' && line.back() == ']') {
+                            in_profile_section = (line.substr(1, line.size() - 2) == profile);
+                            continue;
+                        }
+
+                        if (!in_profile_section) continue;
+
+                        auto pos = line.find('=');
+                        if (pos == std::string::npos) continue;
+
+                        std::string key = line.substr(0, pos);
+                        std::string value = line.substr(pos + 1);
+
+                        key.erase(0, key.find_first_not_of(" \t"));
+                        key.erase(key.find_last_not_of(" \t") + 1);
+                        value.erase(0, value.find_first_not_of(" \t"));
+                        value.erase(value.find_last_not_of(" \t") + 1);
+
+                        if (key == "http_path" || key == "sql_http_path") {
+                            sql.http_path = value;
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            sql.http_path = http_path_env;
+        }
+
+        if (sql.http_path.empty()) {
+            throw std::runtime_error(
+                "DATABRICKS_HTTP_PATH not found in environment or profile. "
+                "Set DATABRICKS_HTTP_PATH environment variable or add http_path to ~/.databrickscfg"
+            );
+        }
+
+        sql_ = std::make_unique<SQLConfig>(sql);
+        return *this;
+    }
+
+    Client::Builder& Client::Builder::with_auto_connect(bool enable)
+    {
+        auto_connect_ = enable;
+        return *this;
+    }
+
+    Client Client::Builder::build()
+    {
+        if (!auth_) {
+            throw std::runtime_error("AuthConfig is required. Call with_auth() or with_environment_config()");
+        }
+        if (!sql_) {
+            throw std::runtime_error("SQLConfig is required. Call with_sql() or with_environment_config()");
+        }
+
+        PoolingConfig pooling = pooling_ ? *pooling_ : PoolingConfig{};
+        return Client(*auth_, *sql_, pooling, auto_connect_);
+    }
+
+    // ========== Client Implementation ==========
+
+    Client::Client(const AuthConfig& auth, const SQLConfig& sql, const PoolingConfig& pooling, bool auto_connect)
+        : pimpl_(std::make_unique<Impl>(auth, sql, pooling, auto_connect))
     {
     }
 
     Client::~Client() = default;
 
-    Client::Client(Client &&) noexcept = default;
-    Client &Client::operator=(Client &&) noexcept = default;
+    Client::Client(Client&&) noexcept = default;
+    Client& Client::operator=(Client&&) noexcept = default;
 
-    const Client::Config &Client::get_config() const
+    const AuthConfig& Client::get_auth_config() const
     {
-        return pimpl_->config;
+        return pimpl_->auth;
+    }
+
+    const SQLConfig& Client::get_sql_config() const
+    {
+        return pimpl_->sql;
+    }
+
+    const PoolingConfig& Client::get_pooling_config() const
+    {
+        return pimpl_->pooling;
     }
 
     bool Client::is_configured() const
@@ -424,16 +393,11 @@ namespace databricks
         // Pooled clients are configured if they have a valid pool
         if (pimpl_->pool)
         {
-            return !pimpl_->config.host.empty() &&
-                   !pimpl_->config.token.empty() &&
-                   !pimpl_->config.http_path.empty();
+            return pimpl_->auth.is_valid() && pimpl_->sql.is_valid();
         }
 
         // Non-pooled clients need to be connected
-        return !pimpl_->config.host.empty() &&
-               !pimpl_->config.token.empty() &&
-               !pimpl_->config.http_path.empty() &&
-               pimpl_->connected;
+        return pimpl_->auth.is_valid() && pimpl_->sql.is_valid() && pimpl_->connected;
     }
 
     void Client::connect()
@@ -473,11 +437,13 @@ namespace databricks
         });
     }
 
-    std::future<std::vector<std::vector<std::string>>> Client::query_async(const std::string &sql)
+    std::future<std::vector<std::vector<std::string>>> Client::query_async(
+        const std::string& sql,
+        const std::vector<Parameter>& params)
     {
-        return std::async(std::launch::async, [this, sql]()
+        return std::async(std::launch::async, [this, sql, params]()
         {
-            return this->query(sql);
+            return this->query(sql, params);
         });
     }
 
@@ -493,8 +459,8 @@ namespace databricks
     }
 
     std::vector<std::vector<std::string>> Client::query(
-        const std::string &sql,
-        const std::vector<Parameter> &params)
+        const std::string& sql,
+        const std::vector<Parameter>& params)
     {
         // If pooling is enabled, acquire connection from pool and execute
         if (pimpl_->pool)

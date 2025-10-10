@@ -17,12 +17,11 @@ int main()
         std::cout << "=== Async Connection Example ===" << std::endl;
         std::cout << std::endl;
 
-        // Create configuration
-        auto config = examples::load_config_from_env();
-
         // Create client WITHOUT auto-connect (lazy connection)
         std::cout << "Creating client (lazy connection mode)..." << std::endl;
-        databricks::Client client(config, false);
+        auto client = databricks::Client::Builder().with_environment_config()
+            .with_auto_connect(false)
+            .build();
 
         // Start async connection
         std::cout << "Starting async connection..." << std::endl;

@@ -2,46 +2,62 @@
 #include <databricks/client.h>
 
 /**
- * @brief Test default client construction
+ * @brief Test client construction with Builder and invalid config
  */
-TEST(ClientTest, DefaultConstruction) {
-    databricks::Client client;
-    EXPECT_FALSE(client.is_configured());
+TEST(ClientTest, BuilderWithInvalidConfig) {
+    // Creating a client without auth config should throw
+    EXPECT_THROW({
+        databricks::Client::Builder()
+            .build();
+    }, std::runtime_error);
 }
 
 /**
- * @brief Test client with partial configuration
+ * @brief Test client with complete configuration using Builder
  */
-TEST(ClientTest, PartialConfiguration) {
-    databricks::Client::Config config;
-    config.host = "https://test.databricks.com";
-    config.timeout_seconds = 120;
+TEST(ClientTest, BuilderConstruction) {
+    databricks::AuthConfig auth;
+    auth.host = "https://test.databricks.com";
+    auth.token = "test_token";
+    auth.timeout_seconds = 120;
 
-    databricks::Client client(config);
+    databricks::SQLConfig sql;
+    sql.http_path = "/sql/1.0/warehouses/test";
 
-    const auto& retrieved_config = client.get_config();
-    EXPECT_EQ(retrieved_config.host, "https://test.databricks.com");
-    EXPECT_EQ(retrieved_config.timeout_seconds, 120);
+    // This should not throw since we have all required fields
+    auto client = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .build();
+
+    const auto& retrieved_auth = client.get_auth_config();
+    const auto& retrieved_sql = client.get_sql_config();
+
+    EXPECT_EQ(retrieved_auth.host, "https://test.databricks.com");
+    EXPECT_EQ(retrieved_auth.token, "test_token");
+    EXPECT_EQ(retrieved_auth.timeout_seconds, 120);
+    EXPECT_EQ(retrieved_sql.http_path, "/sql/1.0/warehouses/test");
 }
 
 /**
  * @brief Test that invalid credentials throw an error when connecting
  */
 TEST(ClientTest, InvalidCredentialsThrow) {
-    databricks::Client::Config config;
-    config.host = "https://invalid.databricks.com";
-    config.token = "invalid_token";
-    config.http_path = "/sql/1.0/warehouses/invalid";
+    databricks::AuthConfig auth;
+    auth.host = "https://invalid.databricks.com";
+    auth.token = "invalid_token";
+
+    databricks::SQLConfig sql;
+    sql.http_path = "/sql/1.0/warehouses/invalid";
 
     // Client uses lazy connection, so it won't throw until connect() or query()
-    databricks::Client client(config);
+    auto client = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .build();
 
     EXPECT_THROW({
         client.connect();
     }, std::exception);
 }
 
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}

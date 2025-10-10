@@ -22,12 +22,22 @@ int main()
         std::cout << "=== Connection Pool + Async Example ===" << std::endl;
         std::cout << std::endl;
 
-        // Create connection configuration
-        auto config = examples::load_config_from_env();
+        // Load configuration
+        databricks::AuthConfig auth = databricks::AuthConfig::from_environment();
+        databricks::SQLConfig sql;
+        const char* http_path_env = std::getenv("DATABRICKS_HTTP_PATH");
+        if (!http_path_env) http_path_env = std::getenv("DATABRICKS_SQL_HTTP_PATH");
+        if (http_path_env) {
+            sql.http_path = http_path_env;
+        } else {
+            std::cerr << "DATABRICKS_HTTP_PATH environment variable not set" << std::endl;
+            examples::print_env_setup_instructions();
+            return 1;
+        }
 
         // Create connection pool
         std::cout << "Creating connection pool (min=3, max=10)..." << std::endl;
-        databricks::ConnectionPool pool(config, 3, 10);
+        databricks::ConnectionPool pool(auth, sql, 3, 10);
 
         // Async warm-up of the pool
         std::cout << "Starting async pool warm-up..." << std::endl;

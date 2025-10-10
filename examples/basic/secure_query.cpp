@@ -1,24 +1,22 @@
 #include <databricks/client.h>
-#include "../common/config_helper.h"
 #include <iostream>
 #include <iomanip>
 
 /**
  * @brief Example demonstrating SECURE parameterized query execution
  *
- * This example shows how to use query_prepared() to prevent SQL injection attacks.
- * Always use this method when incorporating user input or dynamic values in queries.
+ * This example shows how to use query() with parameters to prevent SQL injection attacks.
+ * Always use parameters when incorporating user input or dynamic values in queries.
  */
 int main() {
     try {
-        // Load configuration from profile or environment variables
-        auto config = examples::load_config();
-
-        // Create a configured client
-        databricks::Client client(config);
+        // Use Builder pattern to create client from environment configuration
+        auto client = databricks::Client::Builder()
+            .with_environment_config()
+            .build();
 
         std::cout << "Connected to Databricks" << std::endl;
-        std::cout << "Using Connection Pool: " << (config.enable_pooling ? "Yes" : "No") << std::endl;
+        std::cout << "Using Connection Pool: " << (client.get_pooling_config().enabled ? "Yes" : "No") << std::endl;
         std::cout << std::endl;
 
         // ========== EXAMPLE 1: Basic Parameterized Query ==========
@@ -108,8 +106,6 @@ int main() {
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
-        std::cerr << std::endl;
-        examples::print_env_setup_instructions();
         return 1;
     }
 

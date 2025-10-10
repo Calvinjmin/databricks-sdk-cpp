@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include <string>
 #include <memory>
 #include <vector>
@@ -20,133 +21,39 @@ typedef short SQLSMALLINT;
 
 namespace databricks
 {
-
     /**
-     * @brief Main client class for interacting with Databricks
+     * @brief Main client class for Databricks SQL operations
      *
-     * This class provides the primary interface for all Databricks SDK operations.
-     * Supports both synchronous and asynchronous connection modes.
+     * This class provides a clean interface for executing SQL queries against Databricks.
+     * It uses a modular configuration approach with AuthConfig, SQLConfig, and PoolingConfig.
+     *
+     * Example usage:
+     * @code
+     * // Simple usage with environment configuration
+     * auto client = databricks::Client::Builder()
+     *     .with_environment_config()
+     *     .build();
+     *
+     * // Advanced usage with explicit configuration
+     * databricks::AuthConfig auth;
+     * auth.host = "https://your-workspace.cloud.databricks.com";
+     * auth.token = "your_token";
+     *
+     * databricks::SQLConfig sql;
+     * sql.http_path = "/sql/1.0/warehouses/abc123";
+     *
+     * auto client = databricks::Client::Builder()
+     *     .with_auth(auth)
+     *     .with_sql(sql)
+     *     .with_pooling({.enabled = true, .max_connections = 20})
+     *     .build();
+     *
+     * auto results = client.query("SELECT * FROM my_table");
+     * @endcode
      */
     class Client
     {
     public:
-        /**
-         * @brief Configuration options for the Client
-         */
-        struct Config
-        {
-            std::string host;         ///< Databricks workspace URL
-            std::string token;        ///< Authentication token
-            std::string http_path;    ///< HTTP path for SQL warehouse/cluster
-            int timeout_seconds = 60; ///< Request timeout in seconds
-
-            // ODBC driver configuration
-            std::string odbc_driver_name = "Simba Spark ODBC Driver"; ///< ODBC driver name (default: Simba Spark ODBC Driver)
-
-            // Connection pooling settings (optional performance optimization)
-            bool enable_pooling = false;        ///< Enable connection pooling (default: false)
-            size_t pool_min_connections = 1;    ///< Minimum connections in pool (default: 1)
-            size_t pool_max_connections = 10;   ///< Maximum connections in pool (default: 10)
-
-            /**
-             * @brief Generate a hash for this config (used for pool sharing)
-             */
-            size_t hash() const;
-
-            /**
-             * @brief Check if two configs are equivalent for pooling purposes
-             */
-            bool equivalent_for_pooling(const Config& other) const;
-
-            /**
-             * @brief Load Databricks profile configuration from the default CLI config file.
-             * 
-             * Attempts to populate the current Config object (`host`, `token`, `http_path`) 
-             * from the Databricks CLI configuration file (`~/.databrickscfg`).  
-             * 
-             * @param profile The name of the profile to load (default: `"DEFAULT"`).
-             *                Must match a section in the config file like `[DEFAULT]`.
-             * 
-             * @return true if the profile was found and all required fields were loaded; 
-             *         false otherwise.
-             *
-             * @note This function modifies the current Config object in-place.
-             */
-            bool load_profile_config(const std::string& profile = "DEFAULT");
-
-            /**
-             * @brief Load configuration from environment variables.
-             * 
-             * Attempts to populate the current Config object from environment variables:
-             * - DATABRICKS_HOST or DATABRICKS_SERVER_HOSTNAME
-             * - DATABRICKS_TOKEN or DATABRICKS_ACCESS_TOKEN
-             * - DATABRICKS_HTTP_PATH or DATABRICKS_SQL_HTTP_PATH
-             * - DATABRICKS_TIMEOUT (optional)
-             * 
-             * @return true if all required environment variables were found; false otherwise.
-             *
-             * @note This function modifies the current Config object in-place, only 
-             *       overriding fields that have corresponding environment variables set.
-             */
-            bool load_from_env();
-
-            /**
-             * @brief Create a Config by loading from all available sources.
-             * 
-             * Loads configuration with the following precedence (highest to lowest):
-             * 1. Profile configuration file (~/.databrickscfg) - if complete, stops here
-             * 2. Environment variables - only used as fallback if profile is missing/incomplete
-             * 
-             * This gives profile configuration priority, with environment variables as a
-             * fallback for when no profile is configured. The profile is "all or nothing" -
-             * if it exists and has all required fields, it's used exclusively.
-             * 
-             * @param profile The profile name to load from ~/.databrickscfg (default: "DEFAULT")
-             * @return Config object populated from available sources
-             * @throws std::runtime_error if no valid configuration is found
-             */
-            static Config from_environment(const std::string& profile = "DEFAULT");
-        };
-
-        /**
-         * @brief Construct a new Client with default configuration
-         *
-         * Note: Connection is NOT established until first query or explicit connect() call.
-         */
-        Client();
-
-        /**
-         * @brief Construct a new Client with custom configuration
-         * @param config Configuration options
-         * @param auto_connect If true, connects immediately; if false, uses lazy connection (default: false)
-         */
-        explicit Client(const Config &config, bool auto_connect = false);
-
-        /**
-         * @brief Destructor
-         */
-        ~Client();
-
-        // Disable copy
-        Client(const Client &) = delete;
-        Client &operator=(const Client &) = delete;
-
-        // Enable move
-        Client(Client &&) noexcept;
-        Client &operator=(Client &&) noexcept;
-
-        /**
-         * @brief Get the current configuration
-         * @return const Config& Reference to the configuration
-         */
-        const Config &get_config() const;
-
-        /**
-         * @brief Check if the client is configured with valid credentials
-         * @return true if configured, false otherwise
-         */
-        bool is_configured() const;
-
         /**
          * @brief Parameter for parameterized queries
          */
@@ -156,6 +63,110 @@ namespace databricks
             SQLSMALLINT c_type = SQL_C_CHAR;   ///< C data type (default: character)
             SQLSMALLINT sql_type = SQL_VARCHAR; ///< SQL data type (default: VARCHAR)
         };
+
+        /**
+         * @brief Builder pattern for constructing Client with modular configuration
+         *
+         * The Builder provides a fluent interface for configuring the Client.
+         * It ensures that all required configuration is provided before building.
+         */
+        class Builder
+        {
+        public:
+            Builder();
+
+            /**
+             * @brief Set authentication configuration
+             * @param auth Authentication configuration
+             * @return Builder reference for chaining
+             */
+            Builder& with_auth(const AuthConfig& auth);
+
+            /**
+             * @brief Set SQL configuration
+             * @param sql SQL-specific configuration
+             * @return Builder reference for chaining
+             */
+            Builder& with_sql(const SQLConfig& sql);
+
+            /**
+             * @brief Set connection pooling configuration (optional)
+             * @param pooling Pooling configuration
+             * @return Builder reference for chaining
+             */
+            Builder& with_pooling(const PoolingConfig& pooling);
+
+            /**
+             * @brief Load configuration from environment (profile + env vars)
+             *
+             * This is a convenience method that loads auth and SQL config from:
+             * 1. ~/.databrickscfg profile (if exists)
+             * 2. Environment variables (as fallback)
+             *
+             * @param profile Profile name to load (default: "DEFAULT")
+             * @return Builder reference for chaining
+             * @throws std::runtime_error if configuration cannot be loaded
+             */
+            Builder& with_environment_config(const std::string& profile = "DEFAULT");
+
+            /**
+             * @brief Enable auto-connect (connects immediately on build)
+             * @param enable If true, connects immediately; if false, lazy connection (default: false)
+             * @return Builder reference for chaining
+             */
+            Builder& with_auto_connect(bool enable = true);
+
+            /**
+             * @brief Build the Client
+             *
+             * @return Client instance
+             * @throws std::runtime_error if required configuration is missing
+             */
+            Client build();
+
+        private:
+            std::unique_ptr<AuthConfig> auth_;
+            std::unique_ptr<SQLConfig> sql_;
+            std::unique_ptr<PoolingConfig> pooling_;
+            bool auto_connect_ = false;
+        };
+
+        /**
+         * @brief Destructor
+         */
+        ~Client();
+
+        // Disable copy
+        Client(const Client&) = delete;
+        Client& operator=(const Client&) = delete;
+
+        // Enable move
+        Client(Client&&) noexcept;
+        Client& operator=(Client&&) noexcept;
+
+        /**
+         * @brief Get the authentication configuration
+         * @return const AuthConfig& Reference to auth configuration
+         */
+        const AuthConfig& get_auth_config() const;
+
+        /**
+         * @brief Get the SQL configuration
+         * @return const SQLConfig& Reference to SQL configuration
+         */
+        const SQLConfig& get_sql_config() const;
+
+        /**
+         * @brief Get the pooling configuration
+         * @return const PoolingConfig& Reference to pooling configuration
+         */
+        const PoolingConfig& get_pooling_config() const;
+
+        /**
+         * @brief Check if the client is configured with valid credentials
+         * @return true if configured, false otherwise
+         */
+        bool is_configured() const;
 
         /**
          * @brief Execute a SQL query against Databricks
@@ -213,9 +224,13 @@ namespace databricks
          * @brief Asynchronously execute a SQL query
          *
          * @param sql The SQL query to execute
+         * @param params Optional vector of parameter values
          * @return std::future with query results
          */
-        std::future<std::vector<std::vector<std::string>>> query_async(const std::string& sql);
+        std::future<std::vector<std::vector<std::string>>> query_async(
+            const std::string& sql,
+            const std::vector<Parameter>& params = {}
+        );
 
         /**
          * @brief Disconnect from Databricks
@@ -223,8 +238,13 @@ namespace databricks
         void disconnect();
 
     private:
+        // Private constructor for Builder
+        Client(const AuthConfig& auth, const SQLConfig& sql, const PoolingConfig& pooling, bool auto_connect);
+
         class Impl;
         std::unique_ptr<Impl> pimpl_;
+
+        friend class Builder;
     };
 
 } // namespace databricks

@@ -38,9 +38,6 @@ int main(int argc, char *argv[])
         std::cout << "(Specify number of queries as argument: ./benchmark_pooling 10)" << std::endl;
         std::cout << std::endl;
 
-        // Load configuration from environment variables
-        auto base_config = examples::load_config_from_env();
-
         // Simple query for testing
         std::string test_query = "SELECT current_timestamp()";
 
@@ -51,8 +48,6 @@ int main(int argc, char *argv[])
         std::cout << std::endl;
 
         std::vector<long> no_pool_times;
-        databricks::Client::Config no_pool_config = base_config;
-        no_pool_config.enable_pooling = false;
 
         auto no_pool_total = measure_time([&]()
         {
@@ -61,7 +56,9 @@ int main(int argc, char *argv[])
                 auto query_time = measure_time([&]()
                 {
                     // Create new client each time (simulates new connection overhead)
-                    databricks::Client client(no_pool_config, true); // auto-connect
+                    auto client = databricks::Client::Builder().with_environment_config()
+                        .with_auto_connect(true)
+                        .build();
                     client.query(test_query);
                 });
 
@@ -82,13 +79,17 @@ int main(int argc, char *argv[])
         std::cout << std::endl;
 
         std::vector<long> pool_times;
-        databricks::Client::Config pool_config = base_config;
-        pool_config.enable_pooling = true;
-        pool_config.pool_min_connections = 2;
-        pool_config.pool_max_connections = 5;
+
+        // Configure pooling
+        databricks::PoolingConfig pooling;
+        pooling.enabled = true;
+        pooling.min_connections = 2;
+        pooling.max_connections = 5;
 
         // Create client once (pool is shared)
-        databricks::Client pooled_client(pool_config);
+        auto pooled_client = databricks::Client::Builder().with_environment_config()
+            .with_pooling(pooling)
+            .build();
 
         // Pre-warm the pool
         std::cout << "Pre-warming pool..." << std::endl;
