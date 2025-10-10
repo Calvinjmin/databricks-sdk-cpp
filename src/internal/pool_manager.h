@@ -1,20 +1,46 @@
 #pragma once
 
-#include "databricks/client.h"
+#include "databricks/config.h"
 #include "databricks/connection_pool.h"
 #include <memory>
 #include <unordered_map>
 #include <mutex>
+#include <functional>
 
 namespace databricks
 {
     namespace internal
     {
         /**
+         * @brief Configuration key for pool sharing
+         *
+         * This struct is used internally to determine if two clients
+         * can share the same connection pool.
+         */
+        struct PoolKey
+        {
+            std::string host;
+            std::string token;
+            std::string http_path;
+            int timeout_seconds;
+            std::string odbc_driver_name;
+
+            /**
+             * @brief Generate hash for pool key
+             */
+            size_t hash() const;
+
+            /**
+             * @brief Check if two pool keys are equivalent
+             */
+            bool operator==(const PoolKey& other) const;
+        };
+
+        /**
          * @brief Internal singleton managing shared connection pools
          *
          * This class is an implementation detail and should not be used directly.
-         * Users should enable pooling via Client::Config instead.
+         * Users should enable pooling via PoolingConfig instead.
          */
         class PoolManager
         {
@@ -30,10 +56,16 @@ namespace databricks
              * Pools are shared across all Clients with equivalent configs.
              * Thread-safe.
              *
-             * @param config Client configuration
+             * @param auth Authentication configuration
+             * @param sql SQL configuration
+             * @param pooling Pooling configuration
              * @return Shared pointer to ConnectionPool
              */
-            std::shared_ptr<ConnectionPool> get_pool(const Client::Config &config);
+            std::shared_ptr<ConnectionPool> get_pool(
+                const AuthConfig& auth,
+                const SQLConfig& sql,
+                const PoolingConfig& pooling
+            );
 
             /**
              * @brief Shutdown all pools
@@ -58,3 +90,13 @@ namespace databricks
 
     } // namespace internal
 } // namespace databricks
+
+// Hash function for PoolKey
+namespace std {
+    template<>
+    struct hash<databricks::internal::PoolKey> {
+        size_t operator()(const databricks::internal::PoolKey& key) const {
+            return key.hash();
+        }
+    };
+}

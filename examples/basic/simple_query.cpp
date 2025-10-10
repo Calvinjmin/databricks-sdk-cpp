@@ -1,22 +1,22 @@
 #include <databricks/client.h>
-#include "../common/config_helper.h"
 #include <iostream>
 #include <iomanip>
 
 /**
- * @brief Example demonstrating SQL query execution
+ * @brief Example demonstrating SQL query execution with the new Builder pattern
+ *
+ * This example shows the recommended way to create a client using the Builder pattern.
  */
 int main() {
     try {
-        // Load configuration from profile or environment variables
-        // Precedence: profile takes priority, env vars are fallback
-        auto config = examples::load_config();
-        
-        // Create a configured client
-        databricks::Client client(config);
+        // NEW: Use Builder pattern to create client from environment configuration
+        // This automatically loads from ~/.databrickscfg or environment variables
+        auto client = databricks::Client::Builder()
+            .with_environment_config()
+            .build();
 
         std::cout << "Connected to Databricks" << std::endl;
-        std::cout << "Using Connection Pool: " << (config.enable_pooling ? "Yes" : "No") << std::endl;
+        std::cout << "Using Connection Pool: " << (client.get_pooling_config().enabled ? "Yes" : "No") << std::endl;
         std::cout << std::endl;
 
         // Execute a simple query
@@ -45,7 +45,13 @@ int main() {
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         std::cerr << std::endl;
-        examples::print_env_setup_instructions();
+        std::cerr << "To run this example, set the following environment variables:" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "export DATABRICKS_HOST=\"https://your-workspace.databricks.com\"" << std::endl;
+        std::cerr << "export DATABRICKS_TOKEN=\"your_databricks_token\"" << std::endl;
+        std::cerr << "export DATABRICKS_HTTP_PATH=\"/sql/1.0/warehouses/your_warehouse_id\"" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "Or configure ~/.databrickscfg with a [DEFAULT] profile." << std::endl;
         return 1;
     }
 

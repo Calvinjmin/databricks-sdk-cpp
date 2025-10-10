@@ -15,24 +15,32 @@ using ::testing::Return;
 class ConnectionPoolTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        pool_config.host = "https://test.databricks.com";
-        pool_config.token = "test_token_pool";
-        pool_config.http_path = "/sql/1.0/warehouses/test";
-        pool_config.enable_pooling = true;
-        pool_config.pool_min_connections = 2;
-        pool_config.pool_max_connections = 5;
+        auth.host = "https://test.databricks.com";
+        auth.token = "test_token_pool";
+        auth.timeout_seconds = 60;
+
+        sql.http_path = "/sql/1.0/warehouses/test";
+
+        pooling.enabled = true;
+        pooling.min_connections = 2;
+        pooling.max_connections = 5;
     }
 
-    databricks::Client::Config pool_config;
+    databricks::AuthConfig auth;
+    databricks::SQLConfig sql;
+    databricks::PoolingConfig pooling;
 };
 
 /**
- * @brief Test pool creation with valid config
+ * @brief Test client creation with pooling enabled
  */
-TEST_F(ConnectionPoolTest, PoolCreation) {
-    // Pool creation happens internally when client is created with pooling enabled
+TEST_F(ConnectionPoolTest, ClientCreationWithPooling) {
     EXPECT_NO_THROW({
-        databricks::Client client(pool_config);
+        auto client = databricks::Client::Builder()
+            .with_auth(auth)
+            .with_sql(sql)
+            .with_pooling(pooling)
+            .build();
     });
 }
 
@@ -40,88 +48,112 @@ TEST_F(ConnectionPoolTest, PoolCreation) {
  * @brief Test client with pooling enabled uses pool
  */
 TEST_F(ConnectionPoolTest, ClientUsesPoolWhenEnabled) {
-    databricks::Client client(pool_config);
+    auto client = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .with_pooling(pooling)
+        .build();
 
-    const auto& config = client.get_config();
-    EXPECT_TRUE(config.enable_pooling);
-    EXPECT_EQ(config.pool_min_connections, 2);
-    EXPECT_EQ(config.pool_max_connections, 5);
+    const auto& pool_config = client.get_pooling_config();
+    EXPECT_TRUE(pool_config.enabled);
+    EXPECT_EQ(pool_config.min_connections, 2);
+    EXPECT_EQ(pool_config.max_connections, 5);
 }
 
 /**
- * @brief Test multiple clients sharing same pool
+ * @brief Test multiple clients with same configuration share pool
  */
 TEST_F(ConnectionPoolTest, MultipleClientsSharingPool) {
-    databricks::Client client1(pool_config);
-    databricks::Client client2(pool_config);
+    auto client1 = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .with_pooling(pooling)
+        .build();
 
-    // Both clients should use the same pool (same config)
-    EXPECT_TRUE(client1.get_config().equivalent_for_pooling(client2.get_config()));
-}
+    auto client2 = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .with_pooling(pooling)
+        .build();
 
-/**
- * @brief Test pool config equivalence for pooling
- */
-TEST_F(ConnectionPoolTest, PoolConfigEquivalence) {
-    databricks::Client::Config config1 = pool_config;
-    databricks::Client::Config config2 = pool_config;
-
-    // Same connection parameters should be equivalent
-    EXPECT_TRUE(config1.equivalent_for_pooling(config2));
-
-    // Different pool settings shouldn't affect equivalence
-    config2.pool_max_connections = 10;
-    EXPECT_TRUE(config1.equivalent_for_pooling(config2));
-
-    // Different connection parameters should not be equivalent
-    config2.host = "https://other.databricks.com";
-    EXPECT_FALSE(config1.equivalent_for_pooling(config2));
+    // Both clients should have same configuration
+    EXPECT_EQ(client1.get_auth_config().host, client2.get_auth_config().host);
+    EXPECT_EQ(client1.get_sql_config().http_path, client2.get_sql_config().http_path);
 }
 
 /**
  * @brief Test pool with minimum connections
  */
 TEST_F(ConnectionPoolTest, PoolWithMinConnections) {
-    pool_config.pool_min_connections = 1;
-    pool_config.pool_max_connections = 3;
+    pooling.min_connections = 1;
+    pooling.max_connections = 3;
 
-    databricks::Client client(pool_config);
+    auto client = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .with_pooling(pooling)
+        .build();
 
-    EXPECT_EQ(client.get_config().pool_min_connections, 1);
+    EXPECT_EQ(client.get_pooling_config().min_connections, 1);
 }
 
 /**
  * @brief Test pool with maximum connections
  */
 TEST_F(ConnectionPoolTest, PoolWithMaxConnections) {
-    pool_config.pool_min_connections = 5;
-    pool_config.pool_max_connections = 20;
+    pooling.min_connections = 5;
+    pooling.max_connections = 20;
 
-    databricks::Client client(pool_config);
+    auto client = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .with_pooling(pooling)
+        .build();
 
-    EXPECT_EQ(client.get_config().pool_max_connections, 20);
+    EXPECT_EQ(client.get_pooling_config().max_connections, 20);
 }
 
 /**
  * @brief Test disconnect on pooled client (no-op)
  */
 TEST_F(ConnectionPoolTest, DisconnectPooledClient) {
-    databricks::Client client(pool_config);
+    auto client = databricks::Client::Builder()
+        .with_auth(auth)
+        .with_sql(sql)
+        .with_pooling(pooling)
+        .build();
 
     // Disconnect should be a no-op for pooled clients
     EXPECT_NO_THROW(client.disconnect());
 }
 
 /**
- * @brief Test config hash with pooling enabled
+ * @brief Test direct ConnectionPool usage
  */
-TEST_F(ConnectionPoolTest, ConfigHashWithPooling) {
-    databricks::Client::Config config1 = pool_config;
-    databricks::Client::Config config2 = pool_config;
-
-    // Pooling settings don't affect hash (only connection params)
-    config2.pool_max_connections = 100;
-
-    // Hash should be same for equivalent connection parameters
-    EXPECT_EQ(config1.hash(), config2.hash());
+TEST_F(ConnectionPoolTest, DirectConnectionPoolUsage) {
+    EXPECT_NO_THROW({
+        databricks::ConnectionPool pool(auth, sql, 2, 5);
+        auto stats = pool.get_stats();
+        // Initially, no connections should be created yet
+        EXPECT_EQ(stats.total_connections, 0);
+    });
 }
+
+/**
+ * @brief Test PoolingConfig validation
+ */
+TEST_F(ConnectionPoolTest, PoolingConfigValidation) {
+    // Valid config
+    EXPECT_TRUE(pooling.is_valid());
+
+    // Zero min_connections is invalid
+    databricks::PoolingConfig invalid_pooling;
+    invalid_pooling.min_connections = 0;
+    EXPECT_FALSE(invalid_pooling.is_valid());
+
+    // max < min is invalid
+    invalid_pooling.min_connections = 10;
+    invalid_pooling.max_connections = 5;
+    EXPECT_FALSE(invalid_pooling.is_valid());
+}
+

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <databricks/client.h>
+#include <databricks/config.h>
 #include <cstdlib>
 #include <fstream>
 #include <filesystem>
@@ -65,131 +65,56 @@ protected:
 };
 
 /**
- * @brief Test Config default construction
+ * @brief Test AuthConfig default construction
  */
-TEST_F(ConfigTest, DefaultConstruction) {
-    databricks::Client::Config config;
-    EXPECT_TRUE(config.host.empty());
-    EXPECT_TRUE(config.token.empty());
-    EXPECT_TRUE(config.http_path.empty());
-    EXPECT_EQ(config.timeout_seconds, 60);
-    EXPECT_FALSE(config.enable_pooling);
-    EXPECT_EQ(config.pool_min_connections, 1);
-    EXPECT_EQ(config.pool_max_connections, 10);
+TEST_F(ConfigTest, AuthConfigDefaultConstruction) {
+    databricks::AuthConfig auth;
+    EXPECT_TRUE(auth.host.empty());
+    EXPECT_TRUE(auth.token.empty());
+    EXPECT_EQ(auth.timeout_seconds, 60);
 }
 
 /**
- * @brief Test Config construction with values
+ * @brief Test SQLConfig default construction
  */
-TEST_F(ConfigTest, ConstructionWithValues) {
-    databricks::Client::Config config;
-    config.host = "https://test.databricks.com";
-    config.token = "test_token";
-    config.http_path = "/sql/1.0/warehouses/test";
-    config.timeout_seconds = 120;
-    config.enable_pooling = true;
-    config.pool_max_connections = 20;
-
-    EXPECT_EQ(config.host, "https://test.databricks.com");
-    EXPECT_EQ(config.token, "test_token");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/test");
-    EXPECT_EQ(config.timeout_seconds, 120);
-    EXPECT_TRUE(config.enable_pooling);
-    EXPECT_EQ(config.pool_max_connections, 20);
+TEST_F(ConfigTest, SQLConfigDefaultConstruction) {
+    databricks::SQLConfig sql;
+    EXPECT_TRUE(sql.http_path.empty());
+    EXPECT_EQ(sql.odbc_driver_name, "Simba Spark ODBC Driver");
 }
 
 /**
- * @brief Test Config hash generation
+ * @brief Test PoolingConfig default construction
  */
-TEST_F(ConfigTest, HashGeneration) {
-    databricks::Client::Config config1;
-    config1.host = "https://test.databricks.com";
-    config1.token = "token123";
-    config1.http_path = "/sql/1.0/warehouses/test";
-    config1.timeout_seconds = 60;
-
-    databricks::Client::Config config2;
-    config2.host = "https://test.databricks.com";
-    config2.token = "token123";
-    config2.http_path = "/sql/1.0/warehouses/test";
-    config2.timeout_seconds = 60;
-
-    // Same configs should produce same hash
-    EXPECT_EQ(config1.hash(), config2.hash());
-
-    // Different configs should produce different hash (with high probability)
-    config2.token = "different_token";
-    EXPECT_NE(config1.hash(), config2.hash());
+TEST_F(ConfigTest, PoolingConfigDefaultConstruction) {
+    databricks::PoolingConfig pooling;
+    EXPECT_FALSE(pooling.enabled);
+    EXPECT_EQ(pooling.min_connections, 1);
+    EXPECT_EQ(pooling.max_connections, 10);
+    EXPECT_EQ(pooling.connection_timeout_ms, 5000);
 }
 
 /**
- * @brief Test Config equivalence for pooling
+ * @brief Test loading AuthConfig from profile with DEFAULT section
  */
-TEST_F(ConfigTest, EquivalenceForPooling) {
-    databricks::Client::Config config1;
-    config1.host = "https://test.databricks.com";
-    config1.token = "token123";
-    config1.http_path = "/sql/1.0/warehouses/test";
-    config1.timeout_seconds = 60;
-
-    databricks::Client::Config config2;
-    config2.host = "https://test.databricks.com";
-    config2.token = "token123";
-    config2.http_path = "/sql/1.0/warehouses/test";
-    config2.timeout_seconds = 60;
-
-    EXPECT_TRUE(config1.equivalent_for_pooling(config2));
-
-    // Change host
-    config2.host = "https://other.databricks.com";
-    EXPECT_FALSE(config1.equivalent_for_pooling(config2));
-    config2.host = config1.host;
-
-    // Change token
-    config2.token = "different_token";
-    EXPECT_FALSE(config1.equivalent_for_pooling(config2));
-    config2.token = config1.token;
-
-    // Change http_path
-    config2.http_path = "/sql/1.0/warehouses/other";
-    EXPECT_FALSE(config1.equivalent_for_pooling(config2));
-    config2.http_path = config1.http_path;
-
-    // Change timeout
-    config2.timeout_seconds = 120;
-    EXPECT_FALSE(config1.equivalent_for_pooling(config2));
-
-    // Pooling settings should not affect equivalence
-    config2.timeout_seconds = config1.timeout_seconds;
-    config2.enable_pooling = !config1.enable_pooling;
-    EXPECT_TRUE(config1.equivalent_for_pooling(config2));
-}
-
-/**
- * @brief Test loading config from profile with DEFAULT section
- */
-TEST_F(ConfigTest, LoadProfileConfigDefault) {
+TEST_F(ConfigTest, LoadAuthConfigFromProfile) {
     std::string config_content = R"(
 [DEFAULT]
 host = https://profile.databricks.com
 token = profile_token_123
-http_path = /sql/1.0/warehouses/profile_warehouse
 )";
     create_config_file(config_content);
 
-    databricks::Client::Config config;
-    bool result = config.load_profile_config("DEFAULT");
+    databricks::AuthConfig auth = databricks::AuthConfig::from_profile("DEFAULT");
 
-    EXPECT_TRUE(result);
-    EXPECT_EQ(config.host, "https://profile.databricks.com");
-    EXPECT_EQ(config.token, "profile_token_123");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/profile_warehouse");
+    EXPECT_EQ(auth.host, "https://profile.databricks.com");
+    EXPECT_EQ(auth.token, "profile_token_123");
 }
 
 /**
- * @brief Test loading config from named profile
+ * @brief Test loading AuthConfig from named profile
  */
-TEST_F(ConfigTest, LoadProfileConfigNamed) {
+TEST_F(ConfigTest, LoadAuthConfigFromNamedProfile) {
     std::string config_content = R"(
 [DEFAULT]
 host = https://default.databricks.com
@@ -198,195 +123,49 @@ token = default_token
 [production]
 host = https://production.databricks.com
 token = prod_token_456
-http_path = /sql/1.0/warehouses/prod_warehouse
 
 [staging]
 host = https://staging.databricks.com
 token = staging_token
-http_path = /sql/1.0/warehouses/staging_warehouse
 )";
     create_config_file(config_content);
 
-    databricks::Client::Config config;
-    bool result = config.load_profile_config("production");
+    databricks::AuthConfig auth = databricks::AuthConfig::from_profile("production");
 
-    EXPECT_TRUE(result);
-    EXPECT_EQ(config.host, "https://production.databricks.com");
-    EXPECT_EQ(config.token, "prod_token_456");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/prod_warehouse");
+    EXPECT_EQ(auth.host, "https://production.databricks.com");
+    EXPECT_EQ(auth.token, "prod_token_456");
 }
 
 /**
- * @brief Test loading config with sql_http_path alternative key
+ * @brief Test loading AuthConfig from environment variables
  */
-TEST_F(ConfigTest, LoadProfileConfigWithSqlHttpPath) {
-    std::string config_content = R"(
-[DEFAULT]
-host = https://test.databricks.com
-token = test_token
-sql_http_path = /sql/1.0/warehouses/test
-)";
-    create_config_file(config_content);
-
-    databricks::Client::Config config;
-    bool result = config.load_profile_config("DEFAULT");
-
-    EXPECT_TRUE(result);
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/test");
-}
-
-/**
- * @brief Test loading config with comments and whitespace
- */
-TEST_F(ConfigTest, LoadProfileConfigWithCommentsAndWhitespace) {
-    std::string config_content = R"(
-# This is a comment
-[DEFAULT]
-  host   =   https://test.databricks.com
-  token  =   test_token_with_spaces
-  # Another comment
-  http_path = /sql/1.0/warehouses/test
-)";
-    create_config_file(config_content);
-
-    databricks::Client::Config config;
-    bool result = config.load_profile_config("DEFAULT");
-
-    EXPECT_TRUE(result);
-    EXPECT_EQ(config.host, "https://test.databricks.com");
-    EXPECT_EQ(config.token, "test_token_with_spaces");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/test");
-}
-
-/**
- * @brief Test loading non-existent profile
- */
-TEST_F(ConfigTest, LoadProfileConfigNonExistent) {
-    std::string config_content = R"(
-[DEFAULT]
-host = https://test.databricks.com
-token = test_token
-http_path = /sql/1.0/warehouses/test
-)";
-    create_config_file(config_content);
-
-    databricks::Client::Config config;
-    bool result = config.load_profile_config("nonexistent");
-
-    EXPECT_FALSE(result);
-}
-
-/**
- * @brief Test loading profile with missing required fields
- */
-TEST_F(ConfigTest, LoadProfileConfigIncomplete) {
-    std::string config_content = R"(
-[DEFAULT]
-host = https://test.databricks.com
-token = test_token
-# http_path is missing
-)";
-    create_config_file(config_content);
-
-    databricks::Client::Config config;
-    bool result = config.load_profile_config("DEFAULT");
-
-    EXPECT_FALSE(result);
-}
-
-/**
- * @brief Test loading profile when config file doesn't exist
- */
-TEST_F(ConfigTest, LoadProfileConfigFileNotFound) {
-    setenv("HOME", "/nonexistent/path", 1);
-
-    databricks::Client::Config config;
-    bool result = config.load_profile_config("DEFAULT");
-
-    EXPECT_FALSE(result);
-}
-
-/**
- * @brief Test loading config from environment variables
- */
-TEST_F(ConfigTest, LoadFromEnvBasic) {
+TEST_F(ConfigTest, LoadAuthConfigFromEnv) {
     // Point HOME to temp directory to avoid loading real ~/.databrickscfg
     setenv("HOME", temp_dir.c_str(), 1);
-    
+
     setenv("DATABRICKS_HOST", "https://env.databricks.com", 1);
     setenv("DATABRICKS_TOKEN", "env_token_789", 1);
-    setenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/env", 1);
 
-    databricks::Client::Config config;
-    bool result = config.load_from_env();
+    databricks::AuthConfig auth = databricks::AuthConfig::from_env();
 
-    EXPECT_TRUE(result);
-    EXPECT_EQ(config.host, "https://env.databricks.com");
-    EXPECT_EQ(config.token, "env_token_789");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/env");
+    EXPECT_EQ(auth.host, "https://env.databricks.com");
+    EXPECT_EQ(auth.token, "env_token_789");
 }
 
 /**
- * @brief Test loading config from alternative environment variables
+ * @brief Test loading AuthConfig from environment with timeout
  */
-TEST_F(ConfigTest, LoadFromEnvAlternativeNames) {
+TEST_F(ConfigTest, LoadAuthConfigFromEnvWithTimeout) {
     // Point HOME to temp directory to avoid loading real ~/.databrickscfg
     setenv("HOME", temp_dir.c_str(), 1);
-    
-    // Remove any env variables for regular names
-    unsetenv("DATABRICKS_HOST");
-    unsetenv("DATABRICKS_TOKEN");
-    unsetenv("DATABRICKS_HTTP_PATH");
 
-    // Set alternative names
-    setenv("DATABRICKS_SERVER_HOSTNAME", "https://env.databricks.com", 1);
-    setenv("DATABRICKS_ACCESS_TOKEN", "env_token", 1);
-    setenv("DATABRICKS_SQL_HTTP_PATH", "/sql/1.0/warehouses/env", 1);
-
-    databricks::Client::Config config;
-    bool result = config.load_from_env();
-
-    EXPECT_TRUE(result);
-    EXPECT_EQ(config.host, "https://env.databricks.com");
-    EXPECT_EQ(config.token, "env_token");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/env");
-}
-
-/**
- * @brief Test loading config with optional timeout environment variable
- */
-TEST_F(ConfigTest, LoadFromEnvWithTimeout) {
-    // Point HOME to temp directory to avoid loading real ~/.databrickscfg
-    setenv("HOME", temp_dir.c_str(), 1);
-    
     setenv("DATABRICKS_HOST", "https://env.databricks.com", 1);
     setenv("DATABRICKS_TOKEN", "env_token", 1);
-    setenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/env", 1);
     setenv("DATABRICKS_TIMEOUT", "180", 1);
 
-    databricks::Client::Config config;
-    bool result = config.load_from_env();
+    databricks::AuthConfig auth = databricks::AuthConfig::from_env();
 
-    EXPECT_TRUE(result);
-    EXPECT_EQ(config.timeout_seconds, 180);
-}
-
-/**
- * @brief Test loading config from environment with missing variables
- */
-TEST_F(ConfigTest, LoadFromEnvIncomplete) {
-    // Point HOME to temp directory to avoid loading real ~/.databrickscfg
-    setenv("HOME", temp_dir.c_str(), 1);
-    
-    unsetenv("DATABRICKS_HOST");
-    unsetenv("DATABRICKS_SERVER_HOSTNAME");
-    setenv("DATABRICKS_TOKEN", "env_token", 1);
-    setenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/env", 1);
-
-    databricks::Client::Config config;
-    bool result = config.load_from_env();
-
-    EXPECT_FALSE(result);
+    EXPECT_EQ(auth.timeout_seconds, 180);
 }
 
 /**
@@ -398,20 +177,17 @@ TEST_F(ConfigTest, FromEnvironmentPrioritizesProfile) {
 [DEFAULT]
 host = https://profile.databricks.com
 token = profile_token
-http_path = /sql/1.0/warehouses/profile
 )";
     create_config_file(config_content);
 
     setenv("DATABRICKS_HOST", "https://env.databricks.com", 1);
     setenv("DATABRICKS_TOKEN", "env_token", 1);
-    setenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/env", 1);
 
-    databricks::Client::Config config = databricks::Client::Config::from_environment();
+    databricks::AuthConfig auth = databricks::AuthConfig::from_environment();
 
     // Should use profile values, not env vars
-    EXPECT_EQ(config.host, "https://profile.databricks.com");
-    EXPECT_EQ(config.token, "profile_token");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/profile");
+    EXPECT_EQ(auth.host, "https://profile.databricks.com");
+    EXPECT_EQ(auth.token, "profile_token");
 }
 
 /**
@@ -422,13 +198,11 @@ TEST_F(ConfigTest, FromEnvironmentFallbackToEnv) {
     setenv("HOME", "/nonexistent/path", 1);
     setenv("DATABRICKS_HOST", "https://env.databricks.com", 1);
     setenv("DATABRICKS_TOKEN", "env_token", 1);
-    setenv("DATABRICKS_HTTP_PATH", "/sql/1.0/warehouses/env", 1);
 
-    databricks::Client::Config config = databricks::Client::Config::from_environment();
+    databricks::AuthConfig auth = databricks::AuthConfig::from_environment();
 
-    EXPECT_EQ(config.host, "https://env.databricks.com");
-    EXPECT_EQ(config.token, "env_token");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/env");
+    EXPECT_EQ(auth.host, "https://env.databricks.com");
+    EXPECT_EQ(auth.token, "env_token");
 }
 
 /**
@@ -441,29 +215,70 @@ TEST_F(ConfigTest, FromEnvironmentThrowsWhenNoConfig) {
     unsetenv("DATABRICKS_SERVER_HOSTNAME");
     unsetenv("DATABRICKS_TOKEN");
     unsetenv("DATABRICKS_ACCESS_TOKEN");
-    unsetenv("DATABRICKS_HTTP_PATH");
-    unsetenv("DATABRICKS_SQL_HTTP_PATH");
 
     EXPECT_THROW({
-        databricks::Client::Config::from_environment();
+        databricks::AuthConfig::from_environment();
     }, std::runtime_error);
 }
 
 /**
- * @brief Test from_environment with custom profile name
+ * @brief Test AuthConfig validation
  */
-TEST_F(ConfigTest, FromEnvironmentWithCustomProfile) {
-    std::string config_content = R"(
-[production]
-host = https://prod.databricks.com
-token = prod_token
-http_path = /sql/1.0/warehouses/prod
-)";
-    create_config_file(config_content);
+TEST_F(ConfigTest, AuthConfigValidation) {
+    databricks::AuthConfig auth;
 
-    databricks::Client::Config config = databricks::Client::Config::from_environment("production");
+    // Empty config is invalid
+    EXPECT_FALSE(auth.is_valid());
 
-    EXPECT_EQ(config.host, "https://prod.databricks.com");
-    EXPECT_EQ(config.token, "prod_token");
-    EXPECT_EQ(config.http_path, "/sql/1.0/warehouses/prod");
+    // Host only is invalid
+    auth.host = "https://test.databricks.com";
+    EXPECT_FALSE(auth.is_valid());
+
+    // Host + token is valid
+    auth.token = "test_token";
+    EXPECT_TRUE(auth.is_valid());
+
+    // Zero timeout makes it invalid
+    auth.timeout_seconds = 0;
+    EXPECT_FALSE(auth.is_valid());
 }
+
+/**
+ * @brief Test SQLConfig validation
+ */
+TEST_F(ConfigTest, SQLConfigValidation) {
+    databricks::SQLConfig sql;
+
+    // Empty http_path is invalid
+    EXPECT_FALSE(sql.is_valid());
+
+    // With http_path is valid
+    sql.http_path = "/sql/1.0/warehouses/test";
+    EXPECT_TRUE(sql.is_valid());
+}
+
+/**
+ * @brief Test PoolingConfig validation
+ */
+TEST_F(ConfigTest, PoolingConfigValidation) {
+    databricks::PoolingConfig pooling;
+
+    // Default config is valid
+    EXPECT_TRUE(pooling.is_valid());
+
+    // Zero min_connections is invalid
+    pooling.min_connections = 0;
+    EXPECT_FALSE(pooling.is_valid());
+    pooling.min_connections = 1;
+
+    // max < min is invalid
+    pooling.min_connections = 10;
+    pooling.max_connections = 5;
+    EXPECT_FALSE(pooling.is_valid());
+    pooling.max_connections = 10;
+
+    // Zero timeout is invalid
+    pooling.connection_timeout_ms = 0;
+    EXPECT_FALSE(pooling.is_valid());
+}
+

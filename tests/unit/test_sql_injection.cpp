@@ -10,12 +10,20 @@
  */
 class SQLInjectionTest : public ::testing::Test {
 protected:
-    databricks::Client::Config config;
+    databricks::AuthConfig auth;
+    databricks::SQLConfig sql;
 
     void SetUp() override {
-        config.host = "https://test.databricks.com";
-        config.token = "test_token";
-        config.http_path = "/sql/1.0/warehouses/test";
+        auth.host = "https://test.databricks.com";
+        auth.token = "test_token";
+        sql.http_path = "/sql/1.0/warehouses/test";
+    }
+
+    databricks::Client create_client() {
+        return databricks::Client::Builder()
+            .with_auth(auth)
+            .with_sql(sql)
+            .build();
     }
 };
 
@@ -27,7 +35,7 @@ TEST_F(SQLInjectionTest, ParameterizedQueryBasic) {
     // In a real environment with mocked ODBC, this would verify
     // that SQLPrepare and SQLBindParameter are called correctly
 
-    databricks::Client client(config);
+    auto client = create_client();
 
     std::string sql = "SELECT * FROM users WHERE id = ?";
     std::vector<databricks::Client::Parameter> params = {{"123"}};
@@ -51,7 +59,7 @@ TEST_F(SQLInjectionTest, ParameterizedQueryBasic) {
  * @brief Test multiple parameters
  */
 TEST_F(SQLInjectionTest, MultipleParameters) {
-    databricks::Client client(config);
+    auto client = create_client();
 
     std::string sql = "SELECT * FROM users WHERE name = ? AND age > ?";
     std::vector<databricks::Client::Parameter> params = {{"John"}, {"25"}};
@@ -75,7 +83,7 @@ TEST_F(SQLInjectionTest, MultipleParameters) {
  * as literal strings rather than executable SQL code.
  */
 TEST_F(SQLInjectionTest, SQLInjectionAttemptsSafe) {
-    databricks::Client client(config);
+    auto client = create_client();
 
     // Common SQL injection patterns
     std::vector<std::string> malicious_inputs = {
@@ -113,7 +121,7 @@ TEST_F(SQLInjectionTest, SQLInjectionAttemptsSafe) {
  * @brief Test empty parameters
  */
 TEST_F(SQLInjectionTest, EmptyParameters) {
-    databricks::Client client(config);
+    auto client = create_client();
 
     std::string sql = "SELECT * FROM users";
     std::vector<databricks::Client::Parameter> params = {};  // No parameters
@@ -133,7 +141,7 @@ TEST_F(SQLInjectionTest, EmptyParameters) {
  * @brief Test special characters in parameters
  */
 TEST_F(SQLInjectionTest, SpecialCharactersInParameters) {
-    databricks::Client client(config);
+    auto client = create_client();
 
     std::vector<std::string> special_chars = {
         "value with spaces",
@@ -169,7 +177,7 @@ TEST_F(SQLInjectionTest, SpecialCharactersInParameters) {
  * Verifies that providing wrong number of parameters is handled properly
  */
 TEST_F(SQLInjectionTest, ParameterCountMismatch) {
-    databricks::Client client(config);
+    auto client = create_client();
 
     // SQL expects 2 parameters but we provide 1
     std::string sql = "SELECT * FROM users WHERE name = ? AND age = ?";

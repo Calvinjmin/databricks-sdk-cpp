@@ -1,0 +1,104 @@
+#pragma once
+
+#include <string>
+#include <cstddef>
+
+namespace databricks
+{
+    /**
+     * @brief Core authentication configuration shared across all Databricks features
+     *
+     * This configuration contains the fundamental authentication and connection
+     * settings needed to connect to Databricks. It can be shared across multiple
+     * client types (SQL, Workspace, Delta, etc.).
+     */
+    struct AuthConfig
+    {
+        std::string host;         ///< Databricks workspace URL (e.g., "https://your-workspace.cloud.databricks.com")
+        std::string token;        ///< Authentication token (personal access token or OAuth token)
+        int timeout_seconds = 60; ///< Request timeout in seconds (default: 60)
+
+        /**
+         * @brief Load authentication configuration from Databricks CLI profile
+         *
+         * Reads from ~/.databrickscfg file and loads the specified profile section.
+         *
+         * @param profile The profile name to load (default: "DEFAULT")
+         * @return AuthConfig populated from the profile
+         * @throws std::runtime_error if profile is not found or incomplete
+         */
+        static AuthConfig from_profile(const std::string& profile = "DEFAULT");
+
+        /**
+         * @brief Load authentication configuration from environment variables
+         *
+         * Reads from:
+         * - DATABRICKS_HOST or DATABRICKS_SERVER_HOSTNAME
+         * - DATABRICKS_TOKEN or DATABRICKS_ACCESS_TOKEN
+         * - DATABRICKS_TIMEOUT (optional)
+         *
+         * @return AuthConfig populated from environment variables
+         * @throws std::runtime_error if required environment variables are not set
+         */
+        static AuthConfig from_env();
+
+        /**
+         * @brief Load authentication configuration from all available sources
+         *
+         * Precedence (highest to lowest):
+         * 1. Profile configuration file (~/.databrickscfg) - if complete, stops here
+         * 2. Environment variables - used as fallback if profile missing/incomplete
+         *
+         * @param profile The profile name to try loading (default: "DEFAULT")
+         * @return AuthConfig populated from available sources
+         * @throws std::runtime_error if no valid configuration is found
+         */
+        static AuthConfig from_environment(const std::string& profile = "DEFAULT");
+
+        /**
+         * @brief Validate that all required fields are set
+         * @return true if valid, false otherwise
+         */
+        bool is_valid() const;
+    };
+
+    /**
+     * @brief SQL-specific configuration for Databricks SQL operations
+     *
+     * Contains settings specific to SQL query execution, including the
+     * HTTP path to the SQL warehouse/cluster and ODBC driver configuration.
+     */
+    struct SQLConfig
+    {
+        std::string http_path;    ///< HTTP path for SQL warehouse/cluster (e.g., "/sql/1.0/warehouses/abc123")
+        std::string odbc_driver_name = "Simba Spark ODBC Driver"; ///< ODBC driver name (default: Simba Spark ODBC Driver)
+
+        /**
+         * @brief Validate that all required fields are set
+         * @return true if valid, false otherwise
+         */
+        bool is_valid() const;
+    };
+
+    /**
+     * @brief Connection pooling configuration (optional performance optimization)
+     *
+     * Enables connection pooling to improve performance for applications
+     * that execute many queries. Pooling reduces connection overhead by
+     * reusing existing connections.
+     */
+    struct PoolingConfig
+    {
+        bool enabled = false;             ///< Enable connection pooling (default: false)
+        size_t min_connections = 1;       ///< Minimum connections to maintain in pool (default: 1)
+        size_t max_connections = 10;      ///< Maximum connections allowed in pool (default: 10)
+        int connection_timeout_ms = 5000; ///< Timeout for acquiring connection from pool in milliseconds (default: 5000)
+
+        /**
+         * @brief Validate configuration values
+         * @return true if valid, false otherwise
+         */
+        bool is_valid() const;
+    };
+
+} // namespace databricks

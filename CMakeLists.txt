@@ -58,12 +58,14 @@ endif()
 # Library sources
 set(SOURCES
     src/client.cpp
+    src/config.cpp
     src/connection_pool.cpp
     src/internal/pool_manager.cpp
 )
 
 set(HEADERS
     include/databricks/client.h
+    include/databricks/config.h
     include/databricks/connection_pool.h
     include/databricks/version.h
 )

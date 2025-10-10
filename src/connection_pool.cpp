@@ -1,4 +1,5 @@
 #include "databricks/connection_pool.h"
+#include "databricks/client.h"
 #include <stdexcept>
 #include <chrono>
 
@@ -73,20 +74,23 @@ namespace databricks
 
     // ========== ConnectionPool Implementation ==========
 
-    ConnectionPool::ConnectionPool(const PoolConfig &config)
-        : config_(config), total_connections_(0), active_connections_(0), shutdown_(false)
+    ConnectionPool::ConnectionPool(const AuthConfig& auth,
+                                   const SQLConfig& sql,
+                                   size_t min_connections,
+                                   size_t max_connections)
+        : auth_(auth),
+          sql_(sql),
+          min_connections_(min_connections),
+          max_connections_(max_connections),
+          connection_timeout_ms_(5000),
+          total_connections_(0),
+          active_connections_(0),
+          shutdown_(false)
     {
-        if (config_.min_connections > config_.max_connections)
+        if (min_connections_ > max_connections_)
         {
             throw std::invalid_argument("min_connections cannot exceed max_connections");
         }
-    }
-
-    ConnectionPool::ConnectionPool(const Client::Config &connection_config,
-                                   size_t min_connections,
-                                   size_t max_connections)
-        : ConnectionPool(PoolConfig{connection_config, min_connections, max_connections})
-    {
     }
 
     ConnectionPool::~ConnectionPool()
@@ -97,9 +101,13 @@ namespace databricks
     std::unique_ptr<Client> ConnectionPool::create_connection()
     {
         // This should be called with mutex held
-        auto client = std::make_unique<Client>(config_.connection_config);
+        auto client = Client::Builder()
+            .with_auth(auth_)
+            .with_sql(sql_)
+            .with_auto_connect(true)
+            .build();
         total_connections_++;
-        return client;
+        return std::make_unique<Client>(std::move(client));
     }
 
     ConnectionPool::PooledConnection ConnectionPool::acquire()
@@ -108,7 +116,7 @@ namespace databricks
 
         // Wait for available connection or ability to create new one
         auto deadline = std::chrono::steady_clock::now() +
-                        std::chrono::milliseconds(config_.connection_timeout_ms);
+                        std::chrono::milliseconds(connection_timeout_ms_);
 
         while (true)
         {
@@ -127,7 +135,7 @@ namespace databricks
             }
 
             // Create a new connection if under max limit
-            if (total_connections_ < config_.max_connections)
+            if (total_connections_ < max_connections_)
             {
                 auto client = create_connection();
                 active_connections_++;
@@ -175,7 +183,7 @@ namespace databricks
         }
 
         // Create connections up to min_connections
-        while (total_connections_ < config_.min_connections)
+        while (total_connections_ < min_connections_)
         {
             auto client = create_connection();
             available_connections_.push(std::move(client));

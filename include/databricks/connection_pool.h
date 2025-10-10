@@ -1,6 +1,6 @@
 #pragma once
 
-#include "databricks/client.h"
+#include "databricks/config.h"
 #include <memory>
 #include <vector>
 #include <mutex>
@@ -8,37 +8,28 @@
 #include <queue>
 #include <future>
 
+// Forward declare Client to avoid circular dependency
+namespace databricks {
+    class Client;
+}
+
 namespace databricks
 {
-
     /**
      * @brief Thread-safe connection pool for managing Databricks connections
      *
-     * **ADVANCED API**: Most users should enable pooling via Client::Config instead.
+     * **ADVANCED API**: Most users should enable pooling via PoolingConfig instead.
      *
      * This class is for advanced users who need fine-grained control over connection
-     * pooling. For typical use cases, simply set `config.enable_pooling = true` when
-     * creating a Client, and pooling will be handled automatically.
+     * pooling. For typical use cases, simply set `pooling.enabled = true` when
+     * building a Client, and pooling will be handled automatically.
      *
      * The ConnectionPool manages a pool of reusable ODBC connections to improve
      * performance by eliminating connection overhead for repeated operations.
-     *
-     * @see Client::Config::enable_pooling for simple pooling configuration
      */
     class ConnectionPool
     {
     public:
-        /**
-         * @brief Configuration for the connection pool
-         */
-        struct PoolConfig
-        {
-            Client::Config connection_config; ///< Configuration for each connection
-            size_t min_connections = 1;       ///< Minimum number of connections to maintain
-            size_t max_connections = 10;      ///< Maximum number of connections allowed
-            int connection_timeout_ms = 5000; ///< Timeout for acquiring a connection (milliseconds)
-        };
-
         /**
          * @brief RAII wrapper for a pooled connection
          *
@@ -86,20 +77,16 @@ namespace databricks
         };
 
         /**
-         * @brief Construct a ConnectionPool with configuration
-         * @param config Pool configuration
-         */
-        explicit ConnectionPool(const PoolConfig &config);
-
-        /**
-         * @brief Construct a ConnectionPool with simple parameters
-         * @param connection_config Configuration for connections
+         * @brief Construct a ConnectionPool with modular configurations
+         * @param auth Authentication configuration
+         * @param sql SQL configuration
          * @param min_connections Minimum connections to maintain
          * @param max_connections Maximum connections allowed
          */
-        ConnectionPool(const Client::Config &connection_config,
-                       size_t min_connections = 1,
-                       size_t max_connections = 10);
+        ConnectionPool(const AuthConfig& auth,
+                      const SQLConfig& sql,
+                      size_t min_connections = 1,
+                      size_t max_connections = 10);
 
         /**
          * @brief Destructor - closes all connections
@@ -165,7 +152,12 @@ namespace databricks
         void shutdown();
 
     private:
-        PoolConfig config_;
+        AuthConfig auth_;
+        SQLConfig sql_;
+        size_t min_connections_;
+        size_t max_connections_;
+        int connection_timeout_ms_;
+
         std::queue<std::unique_ptr<Client>> available_connections_;
         size_t total_connections_;
         size_t active_connections_;

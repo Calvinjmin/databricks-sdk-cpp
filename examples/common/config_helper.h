@@ -11,43 +11,34 @@
 namespace examples
 {
     /**
-     * @brief Load configuration from all available sources
+     * @brief Create and configure a Client::Builder with environment configuration
      *
      * Uses the SDK's built-in configuration loading with the following precedence:
      * 1. Profile file (~/.databrickscfg) - if complete, uses exclusively
      * 2. Environment variables - only as fallback if profile missing/incomplete
      *
+     * This helper is designed to be used directly in a fluent call chain:
+     * auto client = examples::get_builder().build();
+     * or with additional configuration:
+     * auto client = examples::get_builder().with_pooling(pooling_config).build();
+     *
      * @param profile The profile name to load from ~/.databrickscfg (default: "DEFAULT")
      * @param verbose If true, print configuration source information (default: true)
-     * @return Client::Config loaded from available sources
+     * @return Client configured with environment settings
      * @throws std::runtime_error if no valid configuration is found
      */
-    inline databricks::Client::Config load_config(const std::string& profile = "DEFAULT", bool verbose = true)
+    inline databricks::Client build_client(const std::string& profile = "DEFAULT", bool verbose = true)
     {
         if (verbose) {
-            // Check which source will be used before loading
-            databricks::Client::Config test_config;
-            bool profile_exists = test_config.load_profile_config(profile);
-            
-            if (profile_exists) {
-                std::cout << "Configuration loaded from: Profile [" << profile << "]" << std::endl;
-            } else {
-                std::cout << "Configuration loaded from: Environment variables" << std::endl;
-            }
+            std::cout << "Loading configuration from environment/profile [" << profile << "]..." << std::endl;
         }
 
-        // Use the SDK's factory method that handles all the logic
-        return databricks::Client::Config::from_environment(profile);
+        // Use the SDK's Builder with environment configuration
+        return databricks::Client::Builder()
+            .with_environment_config(profile)
+            .build();
     }
 
-    /**
-     * @brief Legacy function name for backward compatibility
-     * @deprecated Use load_config() instead
-     */
-    inline databricks::Client::Config load_config_from_env()
-    {
-        return load_config("DEFAULT", true);
-    }
 
     /**
      * @brief Print instructions for setting up environment variables
@@ -63,6 +54,7 @@ namespace examples
         std::cout << "Optional:" << std::endl;
         std::cout << "export DATABRICKS_TIMEOUT=120" << std::endl;
         std::cout << std::endl;
+        std::cout << "Or create a ~/.databrickscfg file with a [DEFAULT] section." << std::endl;
     }
 
 } // namespace examples

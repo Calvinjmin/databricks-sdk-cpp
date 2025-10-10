@@ -9,7 +9,7 @@
  * @brief Example demonstrating transparent connection pooling
  *
  * This example shows how easy it is to enable connection pooling.
- * Simply set enable_pooling = true in the config, and the SDK handles the rest!
+ * Simply set pooling.enabled = true using the Builder, and the SDK handles the rest!
  */
 int main()
 {
@@ -18,22 +18,28 @@ int main()
         std::cout << "=== Connection Pooling Example ===" << std::endl;
         std::cout << std::endl;
 
-        // Load configuration from environment variables
-        auto config = examples::load_config_from_env();
-
-        // Enable pooling - that's it!
-        config.enable_pooling = true;
-        config.pool_min_connections = 2;
-        config.pool_max_connections = 5;
+        // Configure pooling settings
+        databricks::PoolingConfig pooling;
+        pooling.enabled = true;
+        pooling.min_connections = 2;
+        pooling.max_connections = 5;
 
         std::cout << "Creating clients with pooling enabled..." << std::endl;
         std::cout << "Pool settings: min=2, max=5" << std::endl;
         std::cout << std::endl;
 
         // Create multiple clients - they automatically share the same pool
-        databricks::Client client1(config);
-        databricks::Client client2(config);
-        databricks::Client client3(config);
+        auto client1 = databricks::Client::Builder().with_environment_config()
+            .with_pooling(pooling)
+            .build();
+
+        auto client2 = databricks::Client::Builder().with_environment_config()
+            .with_pooling(pooling)
+            .build();
+
+        auto client3 = databricks::Client::Builder().with_environment_config()
+            .with_pooling(pooling)
+            .build();
 
         std::cout << "All clients ready! Pooling happens automatically." << std::endl;
         std::cout << std::string(60, '-') << std::endl;
@@ -66,7 +72,7 @@ int main()
         std::cout << std::endl;
 
         std::cout << "=== Key Benefits ===" << std::endl;
-        std::cout << "✓ Simple API - just set config.enable_pooling = true" << std::endl;
+        std::cout << "✓ Simple API - just use Builder with pooling config" << std::endl;
         std::cout << "✓ Automatic pooling - no manual pool management" << std::endl;
         std::cout << "✓ Shared pools - multiple Clients share connections" << std::endl;
         std::cout << "✓ Performance - 10-100x faster than creating new connections" << std::endl;
@@ -77,13 +83,13 @@ int main()
 
         // Demonstrate performance difference
         std::cout << "Testing 3 queries WITHOUT pooling..." << std::endl;
-        databricks::Client::Config no_pool_config = config;
-        no_pool_config.enable_pooling = false;
 
         auto no_pool_start = std::chrono::steady_clock::now();
         for (int i = 0; i < 3; i++)
         {
-            databricks::Client temp_client(no_pool_config, true); // auto-connect
+            auto temp_client = databricks::Client::Builder().with_environment_config()
+                .with_auto_connect(true)
+                .build();
             temp_client.query("SELECT 1");
         }
         auto no_pool_end = std::chrono::steady_clock::now();
