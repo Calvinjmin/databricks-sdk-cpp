@@ -334,7 +334,7 @@ find_package(databricks_sdk CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
 ```
 
-For maintainers: See [VCPKG_SUBMISSION.md](VCPKG_SUBMISSION.md) for the complete submission guide.
+For maintainers: See [dev-docs/VCPKG_SUBMISSION.md](dev-docs/VCPKG_SUBMISSION.md) for the complete submission guide.
 
 ### Option 2: CMake FetchContent (Direct from GitHub)
 

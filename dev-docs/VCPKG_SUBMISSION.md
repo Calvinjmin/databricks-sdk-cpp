@@ -68,8 +68,8 @@ Copy the template files:
 # Create port directory
 mkdir -p ports/databricks-sdk-cpp
 
-# Copy files from the template directory in this repo
-cp /path/to/databricks-sdk-cpp/vcpkg-port-template/* ports/databricks-sdk-cpp/
+# Copy files from the packaging directory in this repo
+cp /path/to/databricks-sdk-cpp/packaging/vcpkg-port/* ports/databricks-sdk-cpp/
 ```
 
 ### 4. Generate SHA512 Hash
