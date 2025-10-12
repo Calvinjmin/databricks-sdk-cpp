@@ -318,26 +318,73 @@ std::cout << "Using warehouse: " << sql.http_path << std::endl;
 
 For a complete example, see `examples/basic/modular_config_example.cpp`.
 
+## Installation
+
+### Option 1: vcpkg (Recommended for Most Users)
+
+Once published to vcpkg (submission in progress), install with:
+
+```bash
+vcpkg install databricks-sdk-cpp
+```
+
+Then use in your CMake project:
+```cmake
+find_package(databricks_sdk CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
+```
+
+For maintainers: See [dev-docs/VCPKG_SUBMISSION.md](dev-docs/VCPKG_SUBMISSION.md) for the complete submission guide.
+
+### Option 2: CMake FetchContent (Direct from GitHub)
+
+Add to your `CMakeLists.txt`:
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+  databricks_sdk
+  GIT_REPOSITORY https://github.com/calvinjmin/databricks-sdk-cpp.git
+  GIT_TAG v0.1.0  # or use 'main' for latest
+)
+
+FetchContent_MakeAvailable(databricks_sdk)
+target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
+```
+
+**Advantages**: No separate installation step, always gets the exact version you specify.
+
+### Option 3: Manual Build and Install
+
+```bash
+# Clone and build
+git clone https://github.com/calvinjmin/databricks-sdk-cpp.git
+cd databricks-sdk-cpp
+mkdir build && cd build
+cmake ..
+cmake --build .
+
+# Install (requires sudo on Linux/macOS)
+sudo cmake --install .
+```
+
+Then use in your project:
+
+```cmake
+find_package(databricks_sdk REQUIRED)
+target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
+```
+
 ## Using in Your Project
 
-### CMake Integration
-
-After installation:
+After installation (via any method above), the SDK is available as a CMake target:
 
 ```cmake
 find_package(databricks_sdk REQUIRED)
 
 add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
-```
-
-### Manual Integration
-
-Add the include directory and link against the library:
-
-```cmake
-target_include_directories(my_app PRIVATE /path/to/databricks-sdk-cpp/include)
-target_link_libraries(my_app PRIVATE databricks_sdk)
 ```
 
 ## Running Examples

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "databricks-sdk-cpp",
+  "version": "0.1.0",
+  "description": "C++ SDK for Databricks, providing an interface for interacting with Databricks services via ODBC",
+  "homepage": "https://github.com/calvinjmin/databricks-sdk-cpp",
+  "license": "MIT",
+  "supports": "!(uwp | arm)",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}
+
