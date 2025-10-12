@@ -34,6 +34,7 @@ Makefile
 *.cmake
 !CMakeLists.txt
 !cmake/*.cmake.in
+!packaging/**/portfile.cmake
 
 # Testing
 Testing/
