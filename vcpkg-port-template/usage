@@ -1,0 +1,14 @@
+databricks-sdk-cpp provides CMake targets:
+
+  find_package(databricks_sdk CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE databricks_sdk::databricks_sdk)
+
+Note: This library requires ODBC to be available on the system:
+  - Windows: Built-in ODBC Driver Manager
+  - Linux/macOS: Install unixODBC (e.g., `brew install unixodbc` or `apt install unixodbc-dev`)
+
+Additionally, you need the Simba Spark ODBC Driver installed:
+  Download from: https://www.databricks.com/spark/odbc-drivers-download
+
+For configuration, see: https://github.com/calvinjmin/databricks-sdk-cpp#configuration
+
