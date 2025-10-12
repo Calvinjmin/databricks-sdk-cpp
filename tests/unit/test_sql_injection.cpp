@@ -20,9 +20,15 @@ protected:
     }
 
     databricks::Client create_client() {
+        // Disable retries for unit tests to make them faster
+        // Unit tests don't have real ODBC connections, so retries just add delay
+        databricks::RetryConfig retry;
+        retry.enabled = false;
+
         return databricks::Client::Builder()
             .with_auth(auth)
             .with_sql(sql)
+            .with_retry(retry)
             .build();
     }
 };

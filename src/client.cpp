@@ -9,6 +9,9 @@
 #include <future>
 #include <mutex>
 #include <functional>
+#include <random>
+#include <chrono>
+#include <thread>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -29,6 +32,7 @@ namespace databricks
         AuthConfig auth;
         SQLConfig sql;
         PoolingConfig pooling;
+        RetryConfig retry;
         SQLHENV henv; // Environment handle
         SQLHDBC hdbc; // Connection handle
         bool connected;
@@ -37,8 +41,8 @@ namespace databricks
         std::future<void> async_connect_future; // Track async connection
         std::shared_ptr<ConnectionPool> pool; // Shared pool (if pooling enabled)
 
-        explicit Impl(const AuthConfig& auth_cfg, const SQLConfig& sql_cfg, const PoolingConfig& pool_cfg, bool auto_connect)
-            : auth(auth_cfg), sql(sql_cfg), pooling(pool_cfg),
+        explicit Impl(const AuthConfig& auth_cfg, const SQLConfig& sql_cfg, const PoolingConfig& pool_cfg, const RetryConfig& retry_cfg, bool auto_connect)
+            : auth(auth_cfg), sql(sql_cfg), pooling(pool_cfg), retry(retry_cfg),
               henv(SQL_NULL_HENV), hdbc(SQL_NULL_HDBC), connected(false), pool(nullptr)
         {
             // Validate configurations
@@ -251,6 +255,173 @@ namespace databricks
 
             return error.str();
         }
+
+        /**
+         * @brief Check if an error message indicates a retryable error
+         *
+         * Determines if the error is transient and can be retried based on:
+         * - ODBC error codes (HY000, 08S01, etc.)
+         * - Error message patterns (timeout, connection refused, etc.)
+         * - Retry configuration settings
+         *
+         * This function implements comprehensive error classification for ODBC errors:
+         * - Connection errors (08xxx family)
+         * - Timeout errors (HYTxx family)
+         * - Transient network errors
+         * - Server unavailability errors
+         *
+         * Non-retryable errors include:
+         * - Authentication failures
+         * - SQL syntax errors
+         * - Permission denied errors
+         * - Resource exhaustion (out of memory)
+         *
+         * @param error The error message to check
+         * @return true if the error is retryable, false otherwise
+         */
+        bool is_error_retryable(const std::string& error) const
+        {
+            // Connection timeout errors (respects retry_on_timeout config)
+            if (retry.retry_on_timeout)
+            {
+                if (error.find("timeout") != std::string::npos ||
+                    error.find("Timeout") != std::string::npos ||
+                    error.find("TIMEOUT") != std::string::npos ||
+                    error.find("HYT00") != std::string::npos ||  // Timeout expired
+                    error.find("HYT01") != std::string::npos)    // Connection timeout
+                {
+                    return true;
+                }
+            }
+
+            // Connection lost / network errors (respects retry_on_connection_lost config)
+            if (retry.retry_on_connection_lost)
+            {
+                if (error.find("Connection refused") != std::string::npos ||
+                    error.find("Connection reset") != std::string::npos ||
+                    error.find("Connection lost") != std::string::npos ||
+                    error.find("Connection closed") != std::string::npos ||
+                    error.find("Broken pipe") != std::string::npos ||
+                    error.find("No route to host") != std::string::npos ||
+                    error.find("Network is unreachable") != std::string::npos ||
+                    error.find("08S01") != std::string::npos ||  // Communication link failure
+                    error.find("08003") != std::string::npos ||  // Connection does not exist
+                    error.find("08006") != std::string::npos ||  // Connection failure
+                    error.find("08007") != std::string::npos ||  // Connection failure during transaction
+                    error.find("08004") != std::string::npos)    // Server rejected connection
+                {
+                    return true;
+                }
+            }
+
+            // Server temporarily unavailable / transient errors (always retryable)
+            if (error.find("Service Unavailable") != std::string::npos ||
+                error.find("Too Many Requests") != std::string::npos ||
+                error.find("503") != std::string::npos ||        // HTTP 503 Service Unavailable
+                error.find("429") != std::string::npos ||        // HTTP 429 Too Many Requests
+                error.find("502") != std::string::npos ||        // HTTP 502 Bad Gateway
+                error.find("504") != std::string::npos ||        // HTTP 504 Gateway Timeout
+                error.find("HY000") != std::string::npos)        // General error (may be transient)
+            {
+                return true;
+            }
+
+            // Non-retryable errors - return false immediately
+            if (error.find("28000") != std::string::npos ||      // Invalid authorization
+                error.find("42000") != std::string::npos ||      // Syntax error or access violation
+                error.find("42S02") != std::string::npos ||      // Table not found
+                error.find("42S22") != std::string::npos ||      // Column not found
+                error.find("23000") != std::string::npos ||      // Integrity constraint violation
+                error.find("HY013") != std::string::npos ||      // Memory allocation error
+                error.find("Authentication") != std::string::npos ||
+                error.find("Permission denied") != std::string::npos ||
+                error.find("Access denied") != std::string::npos)
+            {
+                return false;
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief Execute an operation with automatic retry logic
+         *
+         * Template function that wraps any operation with exponential backoff retry.
+         * Automatically retries on transient errors based on RetryConfig settings.
+         *
+         * Features:
+         * - Exponential backoff with configurable multiplier
+         * - Jitter added to backoff to avoid thundering herd
+         * - Respects max backoff cap to prevent excessive delays
+         * - Intelligent error classification (retryable vs non-retryable)
+         * - Detailed error messages on final failure
+         *
+         * @tparam Func Callable type that returns a value
+         * @param operation The operation to execute (lambda, function, etc.)
+         * @param operation_name Name of the operation for error messages
+         * @return The result of the operation
+         * @throws std::runtime_error if max retries exceeded or non-retryable error
+         */
+        template<typename Func>
+        auto execute_with_retry(Func&& operation, const std::string& operation_name)
+            -> decltype(operation())
+        {
+            // If retries are disabled, execute directly
+            if (!retry.enabled)
+            {
+                return operation();
+            }
+
+            size_t attempt = 0;
+            size_t backoff_ms = retry.initial_backoff_ms;
+
+            while (true)
+            {
+                try
+                {
+                    return operation();
+                }
+                catch (const std::runtime_error& e)
+                {
+                    attempt++;
+                    std::string error_msg = e.what();
+
+                    // Check if error is retryable
+                    bool is_retryable = is_error_retryable(error_msg);
+
+                    // If not retryable or max attempts reached, re-throw
+                    if (!is_retryable || attempt >= retry.max_attempts)
+                    {
+                        if (attempt >= retry.max_attempts)
+                        {
+                            throw std::runtime_error(
+                                "Operation '" + operation_name + "' failed after " +
+                                std::to_string(attempt) + " attempts: " + error_msg
+                            );
+                        }
+                        throw; // Re-throw non-retryable errors immediately
+                    }
+
+                    // Add jitter (±25%) to prevent thundering herd problem
+                    // when multiple clients retry simultaneously
+                    std::random_device rd;
+                    std::mt19937 gen(rd());
+                    std::uniform_real_distribution<> jitter_dist(0.75, 1.25);
+                    double jitter = jitter_dist(gen);
+
+                    size_t jittered_backoff = static_cast<size_t>(backoff_ms * jitter);
+
+                    // Sleep with exponential backoff + jitter
+                    std::this_thread::sleep_for(std::chrono::milliseconds(jittered_backoff));
+
+                    // Calculate next backoff with cap (before jitter is applied next time)
+                    backoff_ms = std::min(
+                        static_cast<size_t>(backoff_ms * retry.backoff_multiplier),
+                        retry.max_backoff_ms
+                    );
+                }
+            }
+        }
     };
 
     // ========== Builder Implementation ==========
@@ -272,6 +443,12 @@ namespace databricks
     Client::Builder& Client::Builder::with_pooling(const PoolingConfig& pooling)
     {
         pooling_ = std::make_unique<PoolingConfig>(pooling);
+        return *this;
+    }
+
+    Client::Builder& Client::Builder::with_retry(const RetryConfig& retry)
+    {
+        retry_ = std::make_unique<RetryConfig>(retry);
         return *this;
     }
 
@@ -358,13 +535,14 @@ namespace databricks
         }
 
         PoolingConfig pooling = pooling_ ? *pooling_ : PoolingConfig{};
-        return Client(*auth_, *sql_, pooling, auto_connect_);
+        RetryConfig retry = retry_ ? *retry_ : RetryConfig{};
+        return Client(*auth_, *sql_, pooling, retry, auto_connect_);
     }
 
     // ========== Client Implementation ==========
 
-    Client::Client(const AuthConfig& auth, const SQLConfig& sql, const PoolingConfig& pooling, bool auto_connect)
-        : pimpl_(std::make_unique<Impl>(auth, sql, pooling, auto_connect))
+    Client::Client(const AuthConfig& auth, const SQLConfig& sql, const PoolingConfig& pooling, const RetryConfig& retry, bool auto_connect)
+        : pimpl_(std::make_unique<Impl>(auth, sql, pooling, retry, auto_connect))
     {
     }
 
@@ -465,14 +643,18 @@ namespace databricks
         // If pooling is enabled, acquire connection from pool and execute
         if (pimpl_->pool)
         {
-            auto pooled_conn = pimpl_->pool->acquire();
-            return pooled_conn->query(sql, params);
-            // Connection automatically returns to pool when pooled_conn goes out of scope
+            // Wrap pooled query with retry logic
+            return pimpl_->execute_with_retry([&]() {
+                auto pooled_conn = pimpl_->pool->acquire();
+                return pooled_conn->query(sql, params);
+                // Connection automatically returns to pool when pooled_conn goes out of scope
+            }, "query");
         }
 
-        // Non-pooled path: use dedicated connection
-        // Ensure connected (lazy connection or wait for async)
-        pimpl_->ensure_connected();
+        // Non-pooled path: use dedicated connection with retry logic
+        return pimpl_->execute_with_retry([&]() -> std::vector<std::vector<std::string>> {
+            // Ensure connected (lazy connection or wait for async)
+            pimpl_->ensure_connected();
 
         SQLHSTMT hstmt = SQL_NULL_HSTMT;
         SQLRETURN ret;
@@ -589,8 +771,9 @@ namespace databricks
             results.push_back(row);
         }
 
-        SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
-        return results;
+            SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+            return results;
+        }, "query");
     }
 
 } // namespace databricks
