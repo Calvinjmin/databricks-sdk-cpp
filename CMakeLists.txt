@@ -14,18 +14,21 @@ option(BUILD_EXAMPLES "Build example applications" ON)
 option(BUILD_TESTS "Build tests" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-# Find ODBC
+# Platform-specific configuration
 if(WIN32)
     # Windows uses odbc32
     set(ODBC_LIBRARIES odbc32)
-else()
-    # Unix/Linux/macOS uses unixODBC or iODBC
-    # Try to find ODBC using standard search paths
+elseif(APPLE)
+    # macOS: Prefer Homebrew paths on Apple Silicon
+    if(NOT CMAKE_PREFIX_PATH AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        list(PREPEND CMAKE_PREFIX_PATH "/opt/homebrew")
+    endif()
+
+    # Find ODBC using macOS paths
     find_path(ODBC_INCLUDE_DIR sql.h
         PATHS
             /opt/homebrew/include
             /usr/local/include
-            /usr/include
             /opt/local/include
         PATH_SUFFIXES odbc
         NO_DEFAULT_PATH)
@@ -33,9 +36,8 @@ else()
     find_library(ODBC_LIBRARY
         NAMES odbc iodbc unixodbc
         PATHS
-            /opt/homebrew/lib 
+            /opt/homebrew/lib
             /usr/local/lib
-            /usr/lib
             /opt/local/lib
         NO_DEFAULT_PATH)
 
@@ -48,12 +50,42 @@ else()
         endif()
     else()
         message(FATAL_ERROR
-            "ODBC library not found. Please install the ODBC driver manager:\n"
-            "  macOS:   brew install unixodbc\n"
-            "  Linux:   sudo apt-get install unixodbc-dev (Debian/Ubuntu)\n"
-            "           sudo yum install unixODBC-devel (RedHat/CentOS)")
+            "ODBC library not found. Please install:\n"
+            "  brew install unixodbc")
+    endif()
+else()
+    # Linux: Use standard paths
+    find_path(ODBC_INCLUDE_DIR sql.h
+        PATHS
+            /usr/include
+            /usr/local/include
+        PATH_SUFFIXES odbc
+        NO_DEFAULT_PATH)
+
+    find_library(ODBC_LIBRARY
+        NAMES odbc unixodbc
+        PATHS
+            /usr/lib
+            /usr/local/lib
+        NO_DEFAULT_PATH)
+
+    if(ODBC_LIBRARY)
+        set(ODBC_LIBRARIES ${ODBC_LIBRARY})
+        message(STATUS "Found ODBC library: ${ODBC_LIBRARY}")
+        if(ODBC_INCLUDE_DIR)
+            set(ODBC_INCLUDE_DIRS ${ODBC_INCLUDE_DIR})
+            message(STATUS "Found ODBC include: ${ODBC_INCLUDE_DIR}")
+        endif()
+    else()
+        message(FATAL_ERROR
+            "ODBC library not found. Please install:\n"
+            "  Debian/Ubuntu: sudo apt-get install unixodbc-dev\n"
+            "  RedHat/CentOS: sudo yum install unixODBC-devel")
     endif()
 endif()
+
+# External libraries
+find_package(spdlog CONFIG REQUIRED)
 
 # Library sources
 set(SOURCES
@@ -61,6 +93,7 @@ set(SOURCES
     src/config.cpp
     src/connection_pool.cpp
     src/internal/pool_manager.cpp
+    src/internal/logger.cpp
 )
 
 set(HEADERS
@@ -73,6 +106,7 @@ set(HEADERS
 # Internal headers (not installed)
 set(INTERNAL_HEADERS
     src/internal/pool_manager.h
+    src/internal/logger.h
 )
 
 # Create library target
@@ -88,7 +122,10 @@ target_include_directories(databricks_sdk
 )
 
 # Link ODBC libraries
-target_link_libraries(databricks_sdk PRIVATE ${ODBC_LIBRARIES})
+target_link_libraries(databricks_sdk PRIVATE 
+    ${ODBC_LIBRARIES}
+    spdlog::spdlog
+)
 
 # Set library properties
 set_target_properties(databricks_sdk PROPERTIES

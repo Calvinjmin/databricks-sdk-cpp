@@ -101,4 +101,41 @@ namespace databricks
         bool is_valid() const;
     };
 
+    /**
+     * @brief Retry configuration for automatic error recovery
+     *
+     * Configures automatic retry behavior for transient failures such as
+     * connection timeouts, network errors, and rate limits. Uses exponential
+     * backoff to avoid overwhelming the server during retries.
+     *
+     * Example usage:
+     * @code
+     * databricks::RetryConfig retry;
+     * retry.enabled = true;
+     * retry.max_attempts = 5;
+     * retry.initial_backoff_ms = 200;
+     *
+     * auto client = databricks::Client::Builder()
+     *     .with_environment_config()
+     *     .with_retry(retry)
+     *     .build();
+     * @endcode
+     */
+    struct RetryConfig
+    {
+        bool enabled = true;                    ///< Enable automatic retries (default: true)
+        size_t max_attempts = 3;                ///< Maximum retry attempts (default: 3)
+        size_t initial_backoff_ms = 100;        ///< Initial backoff in milliseconds (default: 100ms)
+        double backoff_multiplier = 2.0;        ///< Exponential backoff multiplier (default: 2x)
+        size_t max_backoff_ms = 10000;          ///< Maximum backoff cap (default: 10s)
+        bool retry_on_timeout = true;           ///< Retry on connection timeout (default: true)
+        bool retry_on_connection_lost = true;   ///< Retry on connection errors (default: true)
+
+        /**
+         * @brief Validate configuration values
+         * @return true if valid, false otherwise
+         */
+        bool is_valid() const;
+    };
+
 } // namespace databricks

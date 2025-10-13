@@ -142,4 +142,14 @@ namespace databricks
                connection_timeout_ms > 0;
     }
 
+    // ========== RetryConfig Implementation ==========
+
+    bool RetryConfig::is_valid() const
+    {
+        return max_attempts > 0 &&
+               initial_backoff_ms > 0 &&
+               backoff_multiplier > 0.0 &&
+               max_backoff_ms >= initial_backoff_ms;
+    }
+
 } // namespace databricks

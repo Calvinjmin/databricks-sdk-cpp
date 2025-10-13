@@ -1,5 +1,6 @@
 #include "databricks/connection_pool.h"
 #include "databricks/client.h"
+#include "internal/logger.h"
 #include <stdexcept>
 #include <chrono>
 
@@ -89,8 +90,12 @@ namespace databricks
     {
         if (min_connections_ > max_connections_)
         {
+            internal::get_logger()->error("Invalid pool config: min_connections ({}) > max_connections ({})",
+                                          min_connections_, max_connections_);
             throw std::invalid_argument("min_connections cannot exceed max_connections");
         }
+        internal::get_logger()->info("Connection pool created (min: {}, max: {})",
+                                     min_connections_, max_connections_);
     }
 
     ConnectionPool::~ConnectionPool()
@@ -101,6 +106,7 @@ namespace databricks
     std::unique_ptr<Client> ConnectionPool::create_connection()
     {
         // This should be called with mutex held
+        internal::get_logger()->debug("Creating new pooled connection (total will be: {})", total_connections_ + 1);
         auto client = Client::Builder()
             .with_auth(auth_)
             .with_sql(sql_)
@@ -114,6 +120,9 @@ namespace databricks
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
+        internal::get_logger()->debug("Acquiring connection from pool (available: {}, active: {}, total: {})",
+                                      available_connections_.size(), active_connections_, total_connections_);
+
         // Wait for available connection or ability to create new one
         auto deadline = std::chrono::steady_clock::now() +
                         std::chrono::milliseconds(connection_timeout_ms_);
@@ -122,6 +131,7 @@ namespace databricks
         {
             if (shutdown_)
             {
+                internal::get_logger()->error("Cannot acquire connection: pool is shut down");
                 throw std::runtime_error("ConnectionPool has been shut down");
             }
 
@@ -131,6 +141,8 @@ namespace databricks
                 auto client = std::move(available_connections_.front());
                 available_connections_.pop();
                 active_connections_++;
+                internal::get_logger()->debug("Reusing pooled connection (active: {}, available: {})",
+                                              active_connections_, available_connections_.size());
                 return PooledConnection(std::move(client), this);
             }
 
@@ -143,8 +155,10 @@ namespace databricks
             }
 
             // Wait for a connection to become available
+            internal::get_logger()->warn("Pool exhausted (max: {}), waiting for available connection", max_connections_);
             if (cv_.wait_until(lock, deadline) == std::cv_status::timeout)
             {
+                internal::get_logger()->error("Timeout waiting for connection from pool after {}ms", connection_timeout_ms_);
                 throw std::runtime_error("Timeout waiting for connection from pool");
             }
         }
@@ -163,11 +177,14 @@ namespace databricks
         {
             // Don't return connections if shutting down
             total_connections_--;
+            internal::get_logger()->debug("Connection discarded during shutdown (total: {})", total_connections_);
             return;
         }
 
         active_connections_--;
         available_connections_.push(std::move(client));
+        internal::get_logger()->debug("Connection returned to pool (active: {}, available: {})",
+                                      active_connections_, available_connections_.size());
 
         // Notify one waiting thread
         cv_.notify_one();
@@ -179,8 +196,11 @@ namespace databricks
 
         if (shutdown_)
         {
+            internal::get_logger()->error("Cannot warm up pool: pool is shut down");
             throw std::runtime_error("Cannot warm up: pool is shut down");
         }
+
+        internal::get_logger()->info("Warming up connection pool to {} connections", min_connections_);
 
         // Create connections up to min_connections
         while (total_connections_ < min_connections_)
@@ -188,6 +208,8 @@ namespace databricks
             auto client = create_connection();
             available_connections_.push(std::move(client));
         }
+
+        internal::get_logger()->info("Pool warm-up complete ({} connections ready)", min_connections_);
     }
 
     std::future<void> ConnectionPool::warm_up_async()
@@ -215,6 +237,8 @@ namespace databricks
             return;
         }
 
+        internal::get_logger()->info("Shutting down connection pool");
+
         shutdown_ = true;
 
         // Clear all available connections
@@ -223,6 +247,8 @@ namespace databricks
             available_connections_.pop();
             total_connections_--;
         }
+
+        internal::get_logger()->info("Connection pool shutdown complete (active connections: {})", active_connections_);
 
         // Wake up all waiting threads so they can throw
         cv_.notify_all();

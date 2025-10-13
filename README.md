@@ -113,11 +113,12 @@ The SDK uses a modular configuration system with separate concerns for authentic
 
 #### Configuration Structure
 
-The SDK separates configuration into three distinct concerns:
+The SDK separates configuration into four distinct concerns:
 
 - **`AuthConfig`**: Core authentication (host, token, timeout) - shared across all Databricks features
 - **`SQLConfig`**: SQL-specific settings (http_path, ODBC driver name)
 - **`PoolingConfig`**: Optional connection pooling settings (enabled, min/max connections)
+- **`RetryConfig`**: Optional automatic retry settings (enabled, max attempts, backoff strategy)
 
 This modular design allows you to:
 - Share `AuthConfig` across different Databricks service clients (SQL, Workspace, Delta, etc.)
@@ -266,6 +267,61 @@ int main() {
 ```
 
 **Note**: Multiple Clients with the same config automatically share the same pool!
+
+### Automatic Retry Logic (Reliability)
+
+The SDK includes automatic retry logic with exponential backoff for transient failures:
+
+```cpp
+#include <databricks/client.h>
+
+int main() {
+    // Configure retry behavior
+    databricks::RetryConfig retry;
+    retry.enabled = true;                 // Enable retries (default: true)
+    retry.max_attempts = 5;               // Retry up to 5 times (default: 3)
+    retry.initial_backoff_ms = 200;       // Start with 200ms delay (default: 100ms)
+    retry.backoff_multiplier = 2.0;       // Double delay each retry (default: 2.0)
+    retry.max_backoff_ms = 10000;         // Cap at 10 seconds (default: 10000ms)
+    retry.retry_on_timeout = true;        // Retry timeout errors (default: true)
+    retry.retry_on_connection_lost = true;// Retry connection errors (default: true)
+
+    // Build client with retry configuration
+    auto client = databricks::Client::Builder()
+        .with_environment_config()
+        .with_retry(retry)
+        .build();
+
+    // Queries automatically retry on transient errors
+    auto results = client.query("SELECT * FROM my_table");
+
+    return 0;
+}
+```
+
+**Retry Features:**
+- **Exponential backoff** with jitter to prevent thundering herd
+- **Intelligent error classification** - only retries transient errors:
+  - Connection timeouts and network errors
+  - Server unavailability (503, 502, 504)
+  - Rate limiting (429 Too Many Requests)
+- **Non-retryable errors** fail immediately:
+  - Authentication failures
+  - SQL syntax errors
+  - Permission denied errors
+- **Enabled by default** with sensible defaults
+- **Works with connection pooling** for maximum reliability
+
+**Disable Retries (if needed):**
+```cpp
+databricks::RetryConfig no_retry;
+no_retry.enabled = false;
+
+auto client = databricks::Client::Builder()
+    .with_environment_config()
+    .with_retry(no_retry)
+    .build();
+```
 
 ### Mixing Configuration Approaches
 
@@ -493,9 +549,14 @@ Async operations reduce perceived latency by performing work in the background:
 
 1. **Enable pooling** via `PoolingConfig` for applications making multiple queries
 2. **Use async operations** when you can do other work while waiting
-3. **Combine both** for maximum performance in concurrent scenarios
-4. **Size pools appropriately**: min = typical concurrent load, max = peak load
-5. **Share configs**: Clients with identical configs automatically share pools
+3. **Enable retry logic** (on by default) for production reliability against transient failures
+4. **Combine pooling + retries** for maximum reliability and performance
+5. **Size pools appropriately**: min = typical concurrent load, max = peak load
+6. **Share configs**: Clients with identical configs automatically share pools
+7. **Tune retry settings** based on your workload:
+   - High-throughput: Lower `max_attempts` (2-3) to fail fast
+   - Critical operations: Higher `max_attempts` (5-7) for maximum reliability
+   - Rate-limited APIs: Increase `initial_backoff_ms` and `max_backoff_ms`
 
 ## Advanced Usage
 

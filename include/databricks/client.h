@@ -117,6 +117,29 @@ namespace databricks
             Builder& with_auto_connect(bool enable = true);
 
             /**
+             * @brief Set retry configuration for automatic error recovery
+             *
+             * Configures how the client handles transient failures like connection
+             * timeouts and network errors. When enabled, failed operations will be
+             * automatically retried with exponential backoff.
+             *
+             * @param retry Retry configuration
+             * @return Builder reference for chaining
+             *
+             * @code
+             * databricks::RetryConfig retry;
+             * retry.max_attempts = 5;
+             * retry.initial_backoff_ms = 200;
+             *
+             * auto client = databricks::Client::Builder()
+             *     .with_environment_config()
+             *     .with_retry(retry)
+             *     .build();
+             * @endcode
+             */
+            Builder& with_retry(const RetryConfig& retry);
+
+            /**
              * @brief Build the Client
              *
              * @return Client instance
@@ -128,6 +151,7 @@ namespace databricks
             std::unique_ptr<AuthConfig> auth_;
             std::unique_ptr<SQLConfig> sql_;
             std::unique_ptr<PoolingConfig> pooling_;
+            std::unique_ptr<RetryConfig> retry_;
             bool auto_connect_ = false;
         };
 
@@ -239,7 +263,7 @@ namespace databricks
 
     private:
         // Private constructor for Builder
-        Client(const AuthConfig& auth, const SQLConfig& sql, const PoolingConfig& pooling, bool auto_connect);
+        Client(const AuthConfig& auth, const SQLConfig& sql, const PoolingConfig& pooling, const RetryConfig& retry, bool auto_connect);
 
         class Impl;
         std::unique_ptr<Impl> pimpl_;
