@@ -47,31 +47,40 @@ namespace databricks
             : auth(auth_cfg), sql(sql_cfg), pooling(pool_cfg), retry(retry_cfg),
               henv(SQL_NULL_HENV), hdbc(SQL_NULL_HDBC), connected(false), pool(nullptr)
         {
+            internal::get_logger()->debug("Initializing Databricks client");
+
             // Validate configurations
             if (!auth.is_valid()) {
+                internal::get_logger()->error("Invalid AuthConfig: missing required fields");
                 throw std::runtime_error("Invalid AuthConfig: host, token, and timeout_seconds are required");
             }
             if (!sql.is_valid()) {
+                internal::get_logger()->error("Invalid SQLConfig: missing required fields");
                 throw std::runtime_error("Invalid SQLConfig: http_path and odbc_driver_name are required");
             }
 
             // If pooling is enabled, get/create shared pool and return early
             if (pooling.enabled)
             {
+                internal::get_logger()->info("Connection pooling enabled (min: {}, max: {})",
+                                             pooling.min_connections, pooling.max_connections);
                 pool = internal::PoolManager::instance().get_pool(auth, sql, pooling);
 
                 if (auto_connect)
                 {
+                    internal::get_logger()->debug("Starting async pool warm-up");
                     pool->warm_up_async();
                 }
                 return; // Don't allocate ODBC handles for pooled clients
             }
 
             // Non-pooled client: allocate dedicated ODBC connection
+            internal::get_logger()->debug("Allocating dedicated ODBC connection (non-pooled)");
             // Allocate environment handle
             SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
             if (!SQL_SUCCEEDED(ret))
             {
+                internal::get_logger()->error("Failed to allocate ODBC environment handle");
                 throw std::runtime_error("Failed to allocate ODBC environment handle");
             }
 
@@ -79,6 +88,7 @@ namespace databricks
             ret = SQLSetEnvAttr(henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3, 0);
             if (!SQL_SUCCEEDED(ret))
             {
+                internal::get_logger()->error("Failed to set ODBC version");
                 SQLFreeHandle(SQL_HANDLE_ENV, henv);
                 throw std::runtime_error("Failed to set ODBC version");
             }
@@ -87,6 +97,7 @@ namespace databricks
             ret = SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc);
             if (!SQL_SUCCEEDED(ret))
             {
+                internal::get_logger()->error("Failed to allocate ODBC connection handle");
                 SQLFreeHandle(SQL_HANDLE_ENV, henv);
                 throw std::runtime_error("Failed to allocate ODBC connection handle");
             }
@@ -178,9 +189,12 @@ namespace databricks
             if (connected)
                 return;
 
+            internal::get_logger()->info("Connecting to Databricks at {}", auth.host);
+
             // Validate driver exists before attempting connection
             if (!validate_driver_exists())
             {
+                internal::get_logger()->error("ODBC driver '{}' not found", sql.odbc_driver_name);
                 throw std::runtime_error(
                     "ODBC driver '" + sql.odbc_driver_name + "' not found.\n\n"
                     "To fix this issue:\n"
@@ -208,10 +222,12 @@ namespace databricks
             if (!SQL_SUCCEEDED(ret))
             {
                 std::string error = get_odbc_error(SQL_HANDLE_DBC, hdbc);
+                internal::get_logger()->error("Connection failed: {}", error);
                 throw std::runtime_error("Failed to connect to Databricks: " + error);
             }
 
             connected = true;
+            internal::get_logger()->info("Successfully connected to {}", auth.host);
         }
 
         void ensure_connected()
@@ -233,8 +249,10 @@ namespace databricks
         {
             if (connected && hdbc != SQL_NULL_HDBC)
             {
+                internal::get_logger()->info("Disconnecting from Databricks");
                 SQLDisconnect(hdbc);
                 connected = false;
+                internal::get_logger()->debug("Disconnected successfully");
             }
         }
 
@@ -381,6 +399,11 @@ namespace databricks
             {
                 try
                 {
+                    if (attempt > 0)
+                    {
+                        internal::get_logger()->debug("Retry attempt {}/{} for {}",
+                                                      attempt + 1, retry.max_attempts, operation_name);
+                    }
                     return operation();
                 }
                 catch (const std::runtime_error& e)
@@ -396,11 +419,15 @@ namespace databricks
                     {
                         if (attempt >= retry.max_attempts)
                         {
+                            internal::get_logger()->error("{} failed after {} attempts: {}",
+                                                          operation_name, retry.max_attempts, error_msg);
                             throw std::runtime_error(
                                 "Operation '" + operation_name + "' failed after " +
                                 std::to_string(attempt) + " attempts: " + error_msg
                             );
                         }
+                        internal::get_logger()->error("{} failed with non-retryable error: {}",
+                                                      operation_name, error_msg);
                         throw; // Re-throw non-retryable errors immediately
                     }
 
@@ -412,6 +439,10 @@ namespace databricks
                     double jitter = jitter_dist(gen);
 
                     size_t jittered_backoff = static_cast<size_t>(backoff_ms * jitter);
+
+                    internal::get_logger()->warn("{} attempt {}/{} failed: {} - retrying in {}ms",
+                                                 operation_name, attempt, retry.max_attempts,
+                                                 error_msg, jittered_backoff);
 
                     // Sleep with exponential backoff + jitter
                     std::this_thread::sleep_for(std::chrono::milliseconds(jittered_backoff));
@@ -642,9 +673,17 @@ namespace databricks
         const std::string& sql,
         const std::vector<Parameter>& params)
     {
+        // Log query execution
+        if (internal::get_logger()->should_log(spdlog::level::debug))
+        {
+            std::string query_preview = sql.length() > 100 ? sql.substr(0, 100) + "..." : sql;
+            internal::get_logger()->debug("Executing query: {} (params: {})", query_preview, params.size());
+        }
+
         // If pooling is enabled, acquire connection from pool and execute
         if (pimpl_->pool)
         {
+            internal::get_logger()->debug("Using connection pool for query");
             // Wrap pooled query with retry logic
             return pimpl_->execute_with_retry([&]() {
                 auto pooled_conn = pimpl_->pool->acquire();
@@ -774,6 +813,7 @@ namespace databricks
         }
 
             SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
+            internal::get_logger()->info("Query completed successfully, {} rows returned", results.size());
             return results;
         }, "query");
     }
