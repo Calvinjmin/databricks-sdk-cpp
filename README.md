@@ -376,23 +376,7 @@ For a complete example, see `examples/basic/modular_config_example.cpp`.
 
 ## Installation
 
-### Option 1: vcpkg (Recommended for Most Users)
-
-Once published to vcpkg (submission in progress), install with:
-
-```bash
-vcpkg install databricks-sdk-cpp
-```
-
-Then use in your CMake project:
-```cmake
-find_package(databricks_sdk CONFIG REQUIRED)
-target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
-```
-
-For maintainers: See [dev-docs/VCPKG_SUBMISSION.md](dev-docs/VCPKG_SUBMISSION.md) for the complete submission guide.
-
-### Option 2: CMake FetchContent (Direct from GitHub)
+### Option 1: CMake FetchContent (Recommended - Direct from GitHub)
 
 Add to your `CMakeLists.txt`:
 
@@ -410,6 +394,22 @@ target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
 ```
 
 **Advantages**: No separate installation step, always gets the exact version you specify.
+
+### Option 2: vcpkg
+
+Once published to vcpkg (submission in progress), install with:
+
+```bash
+vcpkg install databricks-sdk-cpp
+```
+
+Then use in your CMake project:
+```cmake
+find_package(databricks_sdk CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
+```
+
+For maintainers: See [dev-docs/VCPKG_SUBMISSION.md](dev-docs/VCPKG_SUBMISSION.md) for the complete submission guide.
 
 ### Option 3: Manual Build and Install
 
