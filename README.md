@@ -1,8 +1,30 @@
 # Databricks C++ SDK
 
+[![Latest Release](https://img.shields.io/github/v/release/calvinjmin/databricks-sdk-cpp?display_name=tag&sort=semver)](https://github.com/calvinjmin/databricks-sdk-cpp/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A C++ SDK for Databricks, providing an interface for interacting with Databricks services.
 
-**Author**: Calvin Min (calvinjmin@gmail.com)
+**Latest Release**: [v0.1.0](https://github.com/calvinjmin/databricks-sdk-cpp/releases/tag/v0.1.0) | **Author**: Calvin Min (calvinjmin@gmail.com)
+
+## Table of Contents
+
+- [Requirements](#requirements)
+  - [ODBC Driver Setup](#odbc-driver-setup)
+  - [Automated Setup Check](#automated-setup-check)
+- [Installation](#installation)
+  - [Option 1: CMake FetchContent (Recommended)](#option-1-cmake-fetchcontent-recommended---direct-from-github)
+  - [Option 2: vcpkg](#option-2-vcpkg)
+  - [Option 3: Manual Build and Install](#option-3-manual-build-and-install)
+- [Building from Source](#building-from-source)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Running Examples](#running-examples)
+- [Performance Considerations](#performance-considerations)
+- [Advanced Usage](#advanced-usage)
+- [Documentation](#documentation)
+- [License](#license)
+- [Contributing](#contributing)
 
 ## Requirements
 
@@ -78,7 +100,65 @@ This will verify:
 - Installed ODBC drivers (including Simba Spark)
 - Library paths
 
-## Building
+## Installation
+
+### Option 1: CMake FetchContent (Recommended - Direct from GitHub)
+
+Add to your `CMakeLists.txt`:
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+  databricks_sdk
+  GIT_REPOSITORY https://github.com/calvinjmin/databricks-sdk-cpp.git
+  GIT_TAG v0.1.0  # or use 'main' for latest
+)
+
+FetchContent_MakeAvailable(databricks_sdk)
+target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
+```
+
+**Advantages**: No separate installation step, always gets the exact version you specify.
+
+### Option 2: vcpkg
+
+Once published to vcpkg (submission in progress), install with:
+
+```bash
+vcpkg install databricks-sdk-cpp
+```
+
+Then use in your CMake project:
+```cmake
+find_package(databricks_sdk CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
+```
+
+For maintainers: See [dev-docs/VCPKG_SUBMISSION.md](dev-docs/VCPKG_SUBMISSION.md) for the complete submission guide.
+
+### Option 3: Manual Build and Install
+
+```bash
+# Clone and build
+git clone https://github.com/calvinjmin/databricks-sdk-cpp.git
+cd databricks-sdk-cpp
+mkdir build && cd build
+cmake ..
+cmake --build .
+
+# Install (requires sudo on Linux/macOS)
+sudo cmake --install .
+```
+
+Then use in your project:
+
+```cmake
+find_package(databricks_sdk REQUIRED)
+target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
+```
+
+## Building from Source
 
 ```bash
 # Create build directory
@@ -373,75 +453,6 @@ std::cout << "Using warehouse: " << sql.http_path << std::endl;
 ```
 
 For a complete example, see `examples/basic/modular_config_example.cpp`.
-
-## Installation
-
-### Option 1: CMake FetchContent (Recommended - Direct from GitHub)
-
-Add to your `CMakeLists.txt`:
-
-```cmake
-include(FetchContent)
-
-FetchContent_Declare(
-  databricks_sdk
-  GIT_REPOSITORY https://github.com/calvinjmin/databricks-sdk-cpp.git
-  GIT_TAG v0.1.0  # or use 'main' for latest
-)
-
-FetchContent_MakeAvailable(databricks_sdk)
-target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
-```
-
-**Advantages**: No separate installation step, always gets the exact version you specify.
-
-### Option 2: vcpkg
-
-Once published to vcpkg (submission in progress), install with:
-
-```bash
-vcpkg install databricks-sdk-cpp
-```
-
-Then use in your CMake project:
-```cmake
-find_package(databricks_sdk CONFIG REQUIRED)
-target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
-```
-
-For maintainers: See [dev-docs/VCPKG_SUBMISSION.md](dev-docs/VCPKG_SUBMISSION.md) for the complete submission guide.
-
-### Option 3: Manual Build and Install
-
-```bash
-# Clone and build
-git clone https://github.com/calvinjmin/databricks-sdk-cpp.git
-cd databricks-sdk-cpp
-mkdir build && cd build
-cmake ..
-cmake --build .
-
-# Install (requires sudo on Linux/macOS)
-sudo cmake --install .
-```
-
-Then use in your project:
-
-```cmake
-find_package(databricks_sdk REQUIRED)
-target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
-```
-
-## Using in Your Project
-
-After installation (via any method above), the SDK is available as a CMake target:
-
-```cmake
-find_package(databricks_sdk REQUIRED)
-
-add_executable(my_app main.cpp)
-target_link_libraries(my_app PRIVATE databricks_sdk::databricks_sdk)
-```
 
 ## Running Examples
 
