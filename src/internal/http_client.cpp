@@ -49,7 +49,7 @@ namespace databricks {
         }
 
         std::string HttpClient::get_base_url() const {
-            return auth_.host + "/api/2.1";
+            return auth_.host + "/api/2.2";
         }
 
         std::map<std::string, std::string> HttpClient::get_headers() const {

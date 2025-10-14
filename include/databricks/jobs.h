@@ -17,10 +17,10 @@ namespace databricks {
      * This struct contains the core metadata about a job configuration.
      */
     struct Job {
-        uint64_t job_id;                ///< Unique identifier for the job
-        std::string name;               ///< Display name of the job
-        std::string creator_user_name;  ///< Username of the job creator
-        uint64_t created_time;          ///< Unix timestamp in milliseconds when the job was created
+        uint64_t job_id = 0;                ///< Unique identifier for the job
+        std::string name;                   ///< Display name of the job
+        std::string creator_user_name;      ///< Username of the job creator
+        uint64_t created_time = 0;          ///< Unix timestamp in milliseconds when the job was created
         std::map<std::string, std::string> settings; ///< Job configuration settings (raw JSON)
 
         /**
@@ -39,12 +39,12 @@ namespace databricks {
      * This struct tracks the state and timing information for a job execution.
      */
     struct JobRun {
-        uint64_t run_id;            ///< Unique identifier for this job run
-        uint64_t job_id;            ///< ID of the job that was executed
-        std::string state;          ///< Lifecycle state (e.g., "RUNNING", "TERMINATED")
-        uint64_t start_time;        ///< Unix timestamp in milliseconds when the run started
-        uint64_t end_time;          ///< Unix timestamp in milliseconds when the run ended (0 if still running)
-        std::string result_state;   ///< Result state (e.g., "SUCCESS", "FAILED")
+        uint64_t run_id = 0;            ///< Unique identifier for this job run
+        uint64_t job_id = 0;            ///< ID of the job that was executed
+        std::string state;              ///< Lifecycle state (e.g., "RUNNING", "TERMINATED")
+        uint64_t start_time = 0;        ///< Unix timestamp in milliseconds when the run started
+        uint64_t end_time = 0;          ///< Unix timestamp in milliseconds when the run ended (0 if still running)
+        std::string result_state;       ///< Result state (e.g., "SUCCESS", "FAILED")
 
         /**
          * @brief Parse a JobRun from JSON string
@@ -59,7 +59,7 @@ namespace databricks {
      * @brief Client for interacting with the Databricks Jobs API
      *
      * The Jobs API allows you to create, manage, and trigger jobs in your Databricks workspace.
-     * This implementation uses Jobs API 2.1 for full feature support including pagination.
+     * This implementation uses Jobs API 2.2 for full feature support including pagination.
      *
      * Example usage:
      * @code
@@ -102,7 +102,7 @@ namespace databricks {
          * @return Vector of Job objects
          * @throws std::runtime_error if the API request fails
          *
-         * @note Uses Jobs API 2.1 for pagination support
+         * @note Uses Jobs API 2.2 for pagination support
          */
         std::vector<Job> list_jobs(int limit = 25, int offset = 0);
 

@@ -10,6 +10,8 @@ A C++ SDK for Databricks, providing an interface for interacting with Databricks
 
 **Author**: Calvin Min (calvinjmin@gmail.com)
 
+---
+
 ## Table of Contents
 
 - [Requirements](#requirements)
@@ -115,7 +117,7 @@ include(FetchContent)
 FetchContent_Declare(
   databricks_sdk
   GIT_REPOSITORY https://github.com/calvinjmin/databricks-sdk-cpp.git
-  GIT_TAG v0.1.0  # or use 'main' for latest
+  GIT_TAG main  # latest tag or declare a specific version like 0.1.0
 )
 
 FetchContent_MakeAvailable(databricks_sdk)
@@ -623,7 +625,7 @@ int main() {
 - **JSON parsing**: Built on `nlohmann/json` for reliable parsing
 
 **API Compatibility:**
-- Uses Jobs API 2.1 for full feature support including pagination
+- Uses Jobs API 2.2 for full feature support including pagination
 - Timestamps returned as Unix milliseconds (`uint64_t`)
 - Automatic error handling with descriptive messages
 
