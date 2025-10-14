@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <databricks/client.h>
+#include <databricks/core/client.h>
 #include "../mocks/mock_odbc.h"
 
 /**

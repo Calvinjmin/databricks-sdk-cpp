@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <databricks/connection_pool.h>
-#include <databricks/client.h>
+#include <databricks/core/client.h>
 #include <thread>
 #include <vector>
 #include <chrono>

@@ -1,4 +1,4 @@
-#include <databricks/client.h>
+#include <databricks/core/client.h>
 #include "../common/config_helper.h"
 #include <iostream>
 #include <chrono>

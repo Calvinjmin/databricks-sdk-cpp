@@ -1,6 +1,6 @@
 #pragma once
 
-#include "databricks/config.h"
+#include "databricks/core/config.h"
 #include "databricks/connection_pool.h"
 #include <memory>
 #include <unordered_map>

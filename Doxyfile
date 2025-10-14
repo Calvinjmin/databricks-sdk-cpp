@@ -18,6 +18,7 @@ GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
+HTML_EXTRA_FILES       = docs/html/.nojekyll
 
 # Documentation extraction
 EXTRACT_ALL            = YES

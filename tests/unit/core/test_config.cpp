@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <databricks/config.h>
+#include <databricks/core/config.h>
 #include <cstdlib>
 #include <fstream>
 #include <filesystem>

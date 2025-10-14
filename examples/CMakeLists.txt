@@ -10,6 +10,9 @@ target_link_libraries(secure_query PRIVATE databricks_sdk)
 add_executable(modular_config_example basic/modular_config_example.cpp)
 target_link_libraries(modular_config_example PRIVATE databricks_sdk)
 
+add_executable(jobs_example basic/jobs_example.cpp)
+target_link_libraries(jobs_example PRIVATE databricks_sdk)
+
 # ========== Connection Pooling Examples ==========
 add_executable(transparent_pooling pooling/transparent_pooling.cpp)
 target_link_libraries(transparent_pooling PRIVATE databricks_sdk)
@@ -33,6 +36,7 @@ set_target_properties(
     benchmark
     async_operations
     pool_async_combined
+    jobs_example
     PROPERTIES
     BUILD_RPATH "${CMAKE_BINARY_DIR};/opt/homebrew/lib;/usr/local/lib"
     INSTALL_RPATH "/opt/homebrew/lib;/usr/local/lib"

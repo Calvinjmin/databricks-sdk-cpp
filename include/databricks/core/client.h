@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.h"
+#include "databricks/core/config.h"
 #include <string>
 #include <memory>
 #include <vector>
