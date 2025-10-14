@@ -91,9 +91,9 @@ find_package(nlohmann_json REQUIRED)
 
 # Library sources
 set(SOURCES
-    src/client.cpp
-    src/config.cpp
-    src/jobs.cpp
+    src/core/client.cpp
+    src/core/config.cpp
+    src/jobs/jobs.cpp
     src/connection_pool.cpp
     src/internal/pool_manager.cpp
     src/internal/logger.cpp
@@ -101,11 +101,11 @@ set(SOURCES
 )
 
 set(HEADERS
-    include/databricks/client.h
-    include/databricks/config.h
+    include/databricks/core/client.h
+    include/databricks/core/config.h
     include/databricks/connection_pool.h
     include/databricks/version.h
-    include/databricks/jobs.h
+    include/databricks/jobs/jobs.h
 )
 
 # Internal headers (not installed)
@@ -139,7 +139,6 @@ target_link_libraries(databricks_sdk PRIVATE
 set_target_properties(databricks_sdk PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-    PUBLIC_HEADER "${HEADERS}"
 )
 
 # Set RPATH for finding ODBC libraries at runtime (Unix/Linux/macOS only)
@@ -178,7 +177,12 @@ install(TARGETS databricks_sdk
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/databricks
+)
+
+# Install headers with directory structure preserved
+install(DIRECTORY include/databricks/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/databricks
+    FILES_MATCHING PATTERN "*.h"
 )
 
 install(EXPORT databricks_sdk-targets

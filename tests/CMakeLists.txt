@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 # ========== Unit Tests (Google Test with GMock) ==========
-file(GLOB UNIT_TEST_SOURCES CONFIGURE_DEPENDS "unit/*.cpp")
+file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "unit/**/*.cpp")
 add_executable(unit_tests ${UNIT_TEST_SOURCES})
 
 target_link_libraries(unit_tests

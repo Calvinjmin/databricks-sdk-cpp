@@ -1,6 +1,6 @@
-#include "databricks/jobs.h"
-#include "internal/http_client.h"
-#include "internal/logger.h"
+#include "databricks/jobs/jobs.h"
+#include "../internal/http_client.h"
+#include "../internal/logger.h"
 
 #include <nlohmann/json.hpp>
 #include <sstream>

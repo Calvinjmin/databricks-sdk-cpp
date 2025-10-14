@@ -1,6 +1,6 @@
 #pragma once
 
-#include <databricks/client.h>
+#include <databricks/core/client.h>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include <databricks/jobs.h>
-#include <databricks/config.h>
+#include <databricks/jobs/jobs.h>
+#include <databricks/core/config.h>
 
 // Test fixture for Jobs tests
 class JobsTest : public ::testing::Test {

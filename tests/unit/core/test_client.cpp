@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include <databricks/client.h>
-#include <databricks/config.h>
+#include <databricks/core/client.h>
+#include <databricks/core/config.h>
 
 /**
  * @brief Test client construction with Builder and invalid config

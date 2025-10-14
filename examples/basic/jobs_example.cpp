@@ -8,8 +8,8 @@
  * 3. Trigger a job run
  */
 
-#include "databricks/jobs.h"
-#include "databricks/config.h"
+#include "databricks/jobs/jobs.h"
+#include "databricks/core/config.h"
 #include <iostream>
 #include <exception>
 

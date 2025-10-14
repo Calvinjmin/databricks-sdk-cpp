@@ -1,7 +1,7 @@
-#include "databricks/client.h"
+#include "databricks/core/client.h"
 #include "databricks/connection_pool.h"
-#include "internal/pool_manager.h"
-#include "internal/logger.h"
+#include "../internal/pool_manager.h"
+#include "../internal/logger.h"
 
 #include <iostream>
 #include <stdexcept>
