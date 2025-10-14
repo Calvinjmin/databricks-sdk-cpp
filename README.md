@@ -2,10 +2,13 @@
 
 [![Latest Release](https://img.shields.io/github/v/release/calvinjmin/databricks-sdk-cpp?display_name=tag&sort=semver)](https://github.com/calvinjmin/databricks-sdk-cpp/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-online-blue.svg)](https://calvinjmin.github.io/databricks-sdk-cpp/)
 
 A C++ SDK for Databricks, providing an interface for interacting with Databricks services.
 
-**Latest Release**: [v0.1.0](https://github.com/calvinjmin/databricks-sdk-cpp/releases/tag/v0.1.0) | **Author**: Calvin Min (calvinjmin@gmail.com)
+**Latest Release**: [v0.1.0](https://github.com/calvinjmin/databricks-sdk-cpp/releases/tag/v0.1.0)
+
+**Author**: Calvin Min (calvinjmin@gmail.com)
 
 ## Table of Contents
 
@@ -494,6 +497,9 @@ After building with `BUILD_EXAMPLES=ON`, examples are organized by feature:
 ```bash
 # Simple SQL query
 ./examples/simple_query
+
+# Jobs API - list jobs, get details, trigger runs
+./examples/jobs_example
 ```
 
 ### Connection Pooling Examples
@@ -571,6 +577,58 @@ Async operations reduce perceived latency by performing work in the background:
 
 ## Advanced Usage
 
+### Jobs API
+
+Interact with Databricks Jobs to automate and orchestrate data workflows:
+
+```cpp
+#include <databricks/jobs.h>
+#include <databricks/config.h>
+
+int main() {
+    // Load auth configuration
+    databricks::AuthConfig auth = databricks::AuthConfig::from_environment();
+
+    // Create Jobs API client
+    databricks::Jobs jobs(auth);
+
+    // List all jobs
+    auto job_list = jobs.list_jobs(25, 0);
+    for (const auto& job : job_list) {
+        std::cout << "Job: " << job.name
+                  << " (ID: " << job.job_id << ")" << std::endl;
+    }
+
+    // Get specific job details
+    auto job = jobs.get_job(123456789);
+    std::cout << "Created by: " << job.creator_user_name << std::endl;
+
+    // Trigger a job run with parameters
+    std::map<std::string, std::string> params;
+    params["date"] = "2024-01-01";
+    params["environment"] = "production";
+
+    uint64_t run_id = jobs.run_now(123456789, params);
+    std::cout << "Started run: " << run_id << std::endl;
+
+    return 0;
+}
+```
+
+**Key Features:**
+- **List jobs**: Paginated listing with limit/offset support
+- **Get job details**: Retrieve full job configuration and metadata
+- **Trigger runs**: Start jobs with optional notebook parameters
+- **Type-safe IDs**: Uses `uint64_t` to correctly handle large job IDs
+- **JSON parsing**: Built on `nlohmann/json` for reliable parsing
+
+**API Compatibility:**
+- Uses Jobs API 2.1 for full feature support including pagination
+- Timestamps returned as Unix milliseconds (`uint64_t`)
+- Automatic error handling with descriptive messages
+
+For a complete example, see `examples/basic/jobs_example.cpp`.
+
 ### Direct ConnectionPool Management
 
 For advanced users who need fine-grained control over connection pools:
@@ -605,24 +663,60 @@ std::cout << "Available: " << stats.available_connections << std::endl;
 
 ## Documentation
 
-Generate API documentation from code comments:
+The SDK includes comprehensive API documentation generated from code comments using Doxygen.
+
+### 📚 View Online Documentation
+
+**Live Documentation**: [https://calvinjmin.github.io/databricks-sdk-cpp/](https://calvinjmin.github.io/databricks-sdk-cpp/)
+
+The documentation is automatically built and published via GitHub Actions whenever changes are pushed to the `main` branch.
+
+### Generate Documentation Locally
 
 ```bash
-# Install Doxygen (macOS)
-brew install doxygen
+# Install Doxygen
+brew install doxygen  # macOS
+# or: sudo apt-get install doxygen  # Linux
 
-# Generate documentation
-make docs
+# Generate docs (creates docs/html/)
+doxygen Doxyfile
 
-# Open documentation in browser
-open docs/html/index.html
+# View in browser
+open docs/html/index.html  # macOS
+# or: xdg-open docs/html/index.html  # Linux
 ```
 
-The documentation includes:
-- API reference for all classes and methods
-- Code examples from comments
-- Class diagrams and inheritance trees
-- Search functionality
+### Documentation Features
+
+The generated documentation includes:
+
+- **Complete API Reference**: All public classes, methods, and structs with detailed descriptions
+- **README Integration**: Full README displayed as the main landing page
+- **Code Examples**: Inline examples from header comments
+- **Jobs API Documentation**: Full reference for `databricks::Jobs`, `Job`, and `JobRun` types
+- **SQL Client Documentation**: Complete `databricks::Client` API reference
+- **Connection Pooling**: `databricks::ConnectionPool` and configuration types
+- **Source Browser**: Browse source code with syntax highlighting
+- **Search Functionality**: Quick search across all documentation
+- **Cross-references**: Navigate between related classes and methods
+
+### Quick Links (After Generation)
+
+- **Main Page**: `docs/html/index.html` - README and getting started
+- **Classes**: `docs/html/annotated.html` - All classes and structs
+- **Jobs API**: `docs/html/classdatabricks_1_1_jobs.html` - Jobs API reference
+- **Client API**: `docs/html/classdatabricks_1_1_client.html` - SQL client reference
+- **Files**: `docs/html/files.html` - Browse by file
+
+### Example: Viewing Jobs API Docs
+
+```bash
+# Generate and open Jobs API documentation
+doxygen Doxyfile
+open docs/html/classdatabricks_1_1_jobs.html
+```
+
+The documentation is automatically generated from the inline comments in header files, ensuring it stays synchronized with the code.
 
 ## License
 

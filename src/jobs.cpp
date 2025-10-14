@@ -159,7 +159,7 @@ namespace databricks {
         return Job::from_json(response.body);
     }
 
-    uint64_t Jobs::run_now(uint64_t job_id, const std::map<std::string, std::string> notebook_params) {
+    uint64_t Jobs::run_now(uint64_t job_id, const std::map<std::string, std::string>& notebook_params) {
         internal::get_logger()->info("Running job_id=" + std::to_string(job_id));
 
         // Build request body using nlohmann/json
