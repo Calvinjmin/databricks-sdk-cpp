@@ -86,14 +86,18 @@ endif()
 
 # External libraries
 find_package(spdlog CONFIG REQUIRED)
+find_package(CURL REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 # Library sources
 set(SOURCES
     src/client.cpp
     src/config.cpp
+    src/jobs.cpp
     src/connection_pool.cpp
     src/internal/pool_manager.cpp
     src/internal/logger.cpp
+    src/internal/http_client.cpp
 )
 
 set(HEADERS
@@ -101,12 +105,14 @@ set(HEADERS
     include/databricks/config.h
     include/databricks/connection_pool.h
     include/databricks/version.h
+    include/databricks/jobs.h
 )
 
 # Internal headers (not installed)
 set(INTERNAL_HEADERS
     src/internal/pool_manager.h
     src/internal/logger.h
+    src/internal/http_client.h
 )
 
 # Create library target
@@ -122,9 +128,11 @@ target_include_directories(databricks_sdk
 )
 
 # Link ODBC libraries
-target_link_libraries(databricks_sdk PRIVATE 
+target_link_libraries(databricks_sdk PRIVATE
     ${ODBC_LIBRARIES}
     spdlog::spdlog
+    CURL::libcurl
+    nlohmann_json::nlohmann_json
 )
 
 # Set library properties
