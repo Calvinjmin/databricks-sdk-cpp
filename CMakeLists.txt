@@ -94,6 +94,8 @@ set(SOURCES
     src/core/client.cpp
     src/core/config.cpp
     src/jobs/jobs.cpp
+    src/compute/compute_types.cpp
+    src/compute/compute.cpp
     src/connection_pool.cpp
     src/internal/pool_manager.cpp
     src/internal/logger.cpp
@@ -106,6 +108,8 @@ set(HEADERS
     include/databricks/connection_pool.h
     include/databricks/version.h
     include/databricks/jobs/jobs.h
+    include/databricks/compute/compute.h
+    include/databricks/compute/compute_types.h
 )
 
 # Internal headers (not installed)
