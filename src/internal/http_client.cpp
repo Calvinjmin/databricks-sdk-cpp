@@ -167,5 +167,14 @@ namespace databricks {
             return response;
         }
 
+        void HttpClient::check_response(const HttpResponse& response, const std::string& operation_name ) const {
+            if (response.status_code != 200) {
+                std::string error_msg = "Failed to " + operation_name + ": HTTP " +
+                                        std::to_string(response.status_code) +
+                                        " - " + response.body;
+                internal::get_logger()->error(error_msg);
+                throw std::runtime_error(error_msg);
+            }
+        }
     }
 }

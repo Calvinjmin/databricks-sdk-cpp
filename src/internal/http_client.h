@@ -41,6 +41,8 @@ namespace databricks {
                  */
                 HttpResponse post( const std::string &path, const std::string &json_body );
 
+                void check_response(const HttpResponse& response, const std::string& operation_name ) const;
+
             private:
                 AuthConfig auth_;
                 std::string get_base_url() const;

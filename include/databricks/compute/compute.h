@@ -20,6 +20,7 @@ namespace databricks {
             class Impl;
             std::unique_ptr<Impl> pimpl_;
 
+            bool cluster_operation(const std::string& cluster_id, const std::string& endpoint, const std::string& operation_name);
             static std::vector<Cluster> parse_clusters_list( const std::string& json_str );
             static Cluster parse_cluster(const std::string& json_str );
     };

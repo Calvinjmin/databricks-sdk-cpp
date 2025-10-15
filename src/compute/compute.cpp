@@ -26,14 +26,7 @@ namespace databricks {
 
         // Make API request
         auto response = pimpl_->http_client_->get("/clusters/list");
-
-        if (response.status_code != 200) {
-            std::string error_msg = "Failed to list clusters: HTTP " +
-                                    std::to_string(response.status_code) +
-                                    " - " + response.body;
-            internal::get_logger()->error(error_msg);
-            throw std::runtime_error(error_msg);
-        }
+        pimpl_->http_client_->check_response(response, "listClusters"); 
 
         internal::get_logger()->debug("Clusters list response: " + response.body);
         return parse_clusters_list(response.body);
@@ -44,29 +37,39 @@ namespace databricks {
 
         // Make API request with cluster_id as query parameter
         auto response = pimpl_->http_client_->get("/clusters/get?cluster_id=" + cluster_id);
-
-        if (response.status_code != 200) {
-            std::string error_msg = "Failed to get cluster: HTTP " +
-                                    std::to_string(response.status_code) +
-                                    " - " + response.body;
-            internal::get_logger()->error(error_msg);
-            throw std::runtime_error(error_msg);
-        }
+        pimpl_->http_client_->check_response(response, "getCluster");
 
         internal::get_logger()->debug("Cluster details response: " + response.body);
         return parse_cluster(response.body);
     }
 
-    bool Compute::start_cluster(const std::string& cluster_id) {
+    bool Compute::cluster_operation(const std::string& cluster_id, const std::string& endpoint, const std::string& operation_name ) {
+        internal::get_logger()->info(operation_name + " cluster id=" + cluster_id);
+
+        json body_json;
+        body_json["cluster_id"] = cluster_id;
+        std::string body = body_json.dump();
+
+        internal::get_logger()->debug(operation_name + " request body: " + body);
+
+        // API Request
+        auto response = pimpl_->http_client_->post(endpoint, body);
+        pimpl_->http_client_->check_response(response, operation_name);
+
+        internal::get_logger()->info("Successfully " + operation_name + " cluster id=" + cluster_id);
         return true;
     }
 
+    bool Compute::start_cluster(const std::string& cluster_id) {
+        return cluster_operation(cluster_id, "/clusters/start", "Starting");
+    }
+
     bool Compute::terminate_cluster(const std::string& cluster_id) {
-        return false;
+        return cluster_operation(cluster_id, "/clusters/delete", "Terminating");
     }
 
     bool Compute::restart_cluster(const std::string& cluster_id) {
-        return false;
+        return cluster_operation(cluster_id, "/clusters/restart", "Restarting");
     }
 
     // Private Methods
