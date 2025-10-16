@@ -631,6 +631,43 @@ int main() {
 
 For a complete example, see `examples/basic/jobs_example.cpp`.
 
+### Compute/Clusters API
+
+Manage Databricks compute clusters programmatically:
+
+```cpp
+#include <databricks/compute/compute.h>
+#include <databricks/core/config.h>
+
+int main() {
+    databricks::AuthConfig auth = databricks::AuthConfig::from_environment();
+    databricks::Compute compute(auth);
+
+    // List clusters
+    auto clusters = compute.list_compute();
+    for (const auto& c : clusters) {
+        std::cout << c.cluster_name << " [" << c.state << "]" << std::endl;
+    }
+
+    // Lifecycle management
+    compute.start_compute("cluster-id");
+    compute.restart_compute("cluster-id");
+    compute.terminate_compute("cluster-id");
+
+    return 0;
+}
+```
+
+**Features:**
+- List/get cluster details
+- Start, restart, and terminate clusters
+- Cluster state tracking (PENDING, RUNNING, TERMINATED, etc.)
+- Automatic HTTP retry logic with exponential backoff
+
+**HTTP Retry Logic:**
+
+All REST API calls automatically retry on transient failures (408, 429, 500-504) with exponential backoff (1s, 2s, 4s). This is built into the HTTP client and requires no configuration
+
 ### Direct ConnectionPool Management
 
 For advanced users who need fine-grained control over connection pools:

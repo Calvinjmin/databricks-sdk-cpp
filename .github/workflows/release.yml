@@ -45,10 +45,31 @@ jobs:
           echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "prev_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
 
-      - name: Update version in CMakeLists.txt
+      - name: Update version in all files
         run: |
-          sed -i "s/VERSION [0-9]\+\.[0-9]\+\.[0-9]\+/VERSION ${{ steps.version.outputs.version }}/" CMakeLists.txt
-          echo "Updated CMakeLists.txt to version ${{ steps.version.outputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Updating version to $VERSION in all files..."
+
+          # Update CMakeLists.txt
+          sed -i "s/VERSION [0-9]\+\.[0-9]\+\.[0-9]\+/VERSION $VERSION/" CMakeLists.txt
+
+          # Update Doxyfile
+          sed -i "s/PROJECT_NUMBER[[:space:]]*=[[:space:]]*\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/PROJECT_NUMBER         = \"$VERSION\"/" Doxyfile
+
+          # Update vcpkg.json
+          sed -i "s/\"version\":[[:space:]]*\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/\"version\": \"$VERSION\"/" vcpkg.json
+
+          # Update packaging/vcpkg-port/vcpkg.json
+          sed -i "s/\"version\":[[:space:]]*\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/\"version\": \"$VERSION\"/" packaging/vcpkg-port/vcpkg.json
+
+          # Update include/databricks/version.h
+          sed -i "s/constexpr const char \*VERSION = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/constexpr const char *VERSION = \"$VERSION\"/" include/databricks/version.h
+
+          # Update README.md - Latest Release line
+          sed -i "s/\*\*Latest Release\*\*:[[:space:]]*\[v[0-9]\+\.[0-9]\+\.[0-9]\+\]/**Latest Release**: [v$VERSION]/" README.md
+          sed -i "s|/releases/tag/v[0-9]\+\.[0-9]\+\.[0-9]\+|/releases/tag/v$VERSION|" README.md
+
+          echo "Version updated to $VERSION in all files"
 
       - name: Generate release notes
         id: notes
@@ -81,7 +102,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CMakeLists.txt
+          git add CMakeLists.txt Doxyfile vcpkg.json packaging/vcpkg-port/vcpkg.json include/databricks/version.h README.md
           git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
           git push origin main
 
