@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "databricks-sdk-cpp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "C++ SDK for Databricks, providing an interface for interacting with Databricks services via ODBC",
   "homepage": "https://github.com/calvinjmin/databricks-sdk-cpp",
   "license": "MIT",
