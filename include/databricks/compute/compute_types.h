@@ -62,9 +62,9 @@ namespace databricks {
      * that can help diagnose issues or understand cluster status.
      */
     struct ClusterState {
-        std::string cluster_id;                ///< Unique identifier for the cluster
-        ClusterStateEnum cluster_state;        ///< Enumerated state value
-        std::string state_message;             ///< Human-readable message describing the state
+        std::string cluster_id;                              ///< Unique identifier for the cluster
+        ClusterStateEnum cluster_state = ClusterStateEnum::UNKNOWN;  ///< Enumerated state value (default: UNKNOWN)
+        std::string state_message;                           ///< Human-readable message describing the state
 
         /**
          * @brief Parse a ClusterState from JSON string
