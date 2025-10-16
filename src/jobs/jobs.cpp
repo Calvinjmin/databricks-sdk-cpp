@@ -123,14 +123,7 @@ namespace databricks {
         // Make API request
         std::string query = build_query_string(params);
         auto response = pimpl_->http_client_->get("/jobs/list" + query);
-
-        if (response.status_code != 200) {
-            std::string error_msg = "Failed to list jobs: HTTP " +
-                                   std::to_string(response.status_code) +
-                                   " - " + response.body;
-            internal::get_logger()->error(error_msg);
-            throw std::runtime_error(error_msg);
-        }
+        pimpl_->http_client_->check_response(response, "listJobs");
 
         internal::get_logger()->debug("Jobs list response: " + response.body);
         return parse_jobs_list(response.body);
@@ -146,14 +139,7 @@ namespace databricks {
         // Make API request
         std::string query = build_query_string(params);
         auto response = pimpl_->http_client_->get("/jobs/get" + query);
-
-        if (response.status_code != 200) {
-            std::string error_msg = "Failed to get job: HTTP " +
-                                   std::to_string(response.status_code) +
-                                   " - " + response.body;
-            internal::get_logger()->error(error_msg);
-            throw std::runtime_error(error_msg);
-        }
+        pimpl_->http_client_->check_response(response, "getJob");
 
         internal::get_logger()->debug("Job details response: " + response.body);
         return Job::from_json(response.body);
@@ -175,14 +161,7 @@ namespace databricks {
 
         // Make API request
         auto response = pimpl_->http_client_->post("/jobs/run-now", body);
-
-        if (response.status_code != 200) {
-            std::string error_msg = "Failed to run job: HTTP " +
-                                   std::to_string(response.status_code) +
-                                   " - " + response.body;
-            internal::get_logger()->error(error_msg);
-            throw std::runtime_error(error_msg);
-        }
+        pimpl_->http_client_->check_response(response, "runJob");
 
         internal::get_logger()->debug("Run now response: " + response.body);
 

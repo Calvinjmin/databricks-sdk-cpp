@@ -4,6 +4,8 @@
 #include <curl/curl.h>
 #include <stdexcept>
 #include <sstream>
+#include <thread>
+#include <chrono>
 
 namespace databricks {
     namespace internal {
@@ -60,7 +62,38 @@ namespace databricks {
             };
         }
 
-        HttpResponse HttpClient::get(const std::string& path) {
+        // ============================================================================
+        // Retry Helper Methods
+        // ============================================================================
+
+        bool HttpClient::should_retry(int status_code, int attempt) const {
+            const int MAX_RETRIES = 3;
+
+            if (attempt >= MAX_RETRIES) {
+                return false;
+            }
+
+            // Retry on these HTTP status codes
+            return status_code == 408 ||  // Request Timeout
+                   status_code == 429 ||  // Too Many Requests (rate limit)
+                   status_code == 500 ||  // Internal Server Error
+                   status_code == 502 ||  // Bad Gateway
+                   status_code == 503 ||  // Service Unavailable
+                   status_code == 504;    // Gateway Timeout
+        }
+
+        int HttpClient::calculate_backoff(int attempt) const {
+            const int INITIAL_BACKOFF_MS = 1000;  // 1 second
+
+            // Exponential backoff: 1s, 2s, 4s, 8s, etc.
+            return INITIAL_BACKOFF_MS * (1 << attempt);
+        }
+
+        // ============================================================================
+        // Core HTTP Execution Methods (without retry)
+        // ============================================================================
+
+        HttpResponse HttpClient::execute_get(const std::string& path) {
             CURL* curl = curl_easy_init();
             if (!curl) {
                 throw std::runtime_error("Failed to initialize CURL");
@@ -112,7 +145,7 @@ namespace databricks {
             return response;
         }
 
-        HttpResponse HttpClient::post(const std::string& path, const std::string& json_body) {
+        HttpResponse HttpClient::execute_post(const std::string& path, const std::string& json_body) {
             CURL* curl = curl_easy_init();
             if (!curl) {
                 throw std::runtime_error("Failed to initialize CURL");
@@ -167,5 +200,118 @@ namespace databricks {
             return response;
         }
 
+        // ============================================================================
+        // Public HTTP Methods (with retry)
+        // ============================================================================
+
+        HttpResponse HttpClient::get(const std::string& path) {
+            const int MAX_RETRIES = 3;
+            HttpResponse response;
+
+            for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+                try {
+                    response = execute_get(path);
+
+                    // Success - return immediately
+                    if (response.status_code == 200) {
+                        return response;
+                    }
+
+                    // Check if we should retry
+                    if (!should_retry(response.status_code, attempt + 1)) {
+                        // Non-retryable error or max retries reached
+                        return response;
+                    }
+
+                    // Calculate backoff and log retry
+                    int backoff_ms = calculate_backoff(attempt);
+                    internal::get_logger()->warn(
+                        "GET request failed with HTTP " + std::to_string(response.status_code) +
+                        ". Retrying in " + std::to_string(backoff_ms) + "ms " +
+                        "(attempt " + std::to_string(attempt + 2) + "/" + std::to_string(MAX_RETRIES) + ")"
+                    );
+
+                    // Wait before retry
+                    std::this_thread::sleep_for(std::chrono::milliseconds(backoff_ms));
+
+                } catch (const std::runtime_error& e) {
+                    // Connection error - retry if not last attempt
+                    if (attempt + 1 >= MAX_RETRIES) {
+                        throw;  // Re-throw on last attempt
+                    }
+
+                    int backoff_ms = calculate_backoff(attempt);
+                    internal::get_logger()->warn(
+                        "GET connection error: " + std::string(e.what()) +
+                        ". Retrying in " + std::to_string(backoff_ms) + "ms"
+                    );
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(backoff_ms));
+                }
+            }
+
+            // Return last response if all retries exhausted
+            return response;
+        }
+
+        HttpResponse HttpClient::post(const std::string& path, const std::string& json_body) {
+            const int MAX_RETRIES = 3;
+            HttpResponse response;
+
+            for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+                try {
+                    response = execute_post(path, json_body);
+
+                    // Success - return immediately
+                    if (response.status_code == 200) {
+                        return response;
+                    }
+
+                    // Check if we should retry
+                    if (!should_retry(response.status_code, attempt + 1)) {
+                        // Non-retryable error or max retries reached
+                        return response;
+                    }
+
+                    // Calculate backoff and log retry
+                    int backoff_ms = calculate_backoff(attempt);
+                    internal::get_logger()->warn(
+                        "POST request failed with HTTP " + std::to_string(response.status_code) +
+                        ". Retrying in " + std::to_string(backoff_ms) + "ms " +
+                        "(attempt " + std::to_string(attempt + 2) + "/" + std::to_string(MAX_RETRIES) + ")"
+                    );
+
+                    // Wait before retry
+                    std::this_thread::sleep_for(std::chrono::milliseconds(backoff_ms));
+
+                } catch (const std::runtime_error& e) {
+                    // Connection error - retry if not last attempt
+                    if (attempt + 1 >= MAX_RETRIES) {
+                        throw;  // Re-throw on last attempt
+                    }
+
+                    int backoff_ms = calculate_backoff(attempt);
+                    internal::get_logger()->warn(
+                        "POST connection error: " + std::string(e.what()) +
+                        ". Retrying in " + std::to_string(backoff_ms) + "ms"
+                    );
+
+                    std::this_thread::sleep_for(std::chrono::milliseconds(backoff_ms));
+                }
+            }
+
+            // Return last response if all retries exhausted
+            return response;
+        }
+
+        void HttpClient::check_response(const HttpResponse& response, const std::string& operation_name ) const {
+            if (response.status_code != 200) {
+                std::string error_msg = "Failed to " + operation_name + ": HTTP " +
+                                        std::to_string(response.status_code) +
+                                        " - " + response.body;
+                internal::get_logger()->error(error_msg);
+                throw std::runtime_error(error_msg);
+            }
+        }
     }
 }

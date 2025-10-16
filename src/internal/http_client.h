@@ -41,10 +41,20 @@ namespace databricks {
                  */
                 HttpResponse post( const std::string &path, const std::string &json_body );
 
+                void check_response(const HttpResponse& response, const std::string& operation_name ) const;
+
             private:
                 AuthConfig auth_;
                 std::string get_base_url() const;
                 std::map<std::string, std::string> get_headers() const;
+
+                // Retry helper methods
+                bool should_retry(int status_code, int attempt) const;
+                int calculate_backoff(int attempt) const;
+
+                // Core HTTP execution methods
+                HttpResponse execute_get(const std::string& path);
+                HttpResponse execute_post(const std::string& path, const std::string& json_body);
         };
     } // namespace internal
 } // namespace databricks
