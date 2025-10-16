@@ -21,30 +21,30 @@ namespace databricks {
     Compute::~Compute() = default;
 
     // Public Methods
-    std::vector<Cluster> Compute::list_clusters() {
-        internal::get_logger()->info("Listing clusters");
+    std::vector<Cluster> Compute::list_compute() {
+        internal::get_logger()->info("Listing compute clusters");
 
         // Make API request
         auto response = pimpl_->http_client_->get("/clusters/list");
-        pimpl_->http_client_->check_response(response, "listClusters"); 
+        pimpl_->http_client_->check_response(response, "listCompute");
 
-        internal::get_logger()->debug("Clusters list response: " + response.body);
-        return parse_clusters_list(response.body);
+        internal::get_logger()->debug("Compute clusters list response: " + response.body);
+        return parse_compute_list(response.body);
     }
 
-    Cluster Compute::get_cluster(const std::string& cluster_id ){
-        internal::get_logger()->info("Getting cluster details for cluster_id=" + cluster_id);
+    Cluster Compute::get_compute(const std::string& cluster_id){
+        internal::get_logger()->info("Getting compute cluster details for cluster_id=" + cluster_id);
 
         // Make API request with cluster_id as query parameter
         auto response = pimpl_->http_client_->get("/clusters/get?cluster_id=" + cluster_id);
-        pimpl_->http_client_->check_response(response, "getCluster");
+        pimpl_->http_client_->check_response(response, "getCompute");
 
-        internal::get_logger()->debug("Cluster details response: " + response.body);
-        return parse_cluster(response.body);
+        internal::get_logger()->debug("Compute cluster details response: " + response.body);
+        return parse_compute(response.body);
     }
 
-    bool Compute::cluster_operation(const std::string& cluster_id, const std::string& endpoint, const std::string& operation_name ) {
-        internal::get_logger()->info(operation_name + " cluster id=" + cluster_id);
+    bool Compute::compute_operation(const std::string& cluster_id, const std::string& endpoint, const std::string& operation_name) {
+        internal::get_logger()->info(operation_name + " compute cluster id=" + cluster_id);
 
         json body_json;
         body_json["cluster_id"] = cluster_id;
@@ -56,24 +56,24 @@ namespace databricks {
         auto response = pimpl_->http_client_->post(endpoint, body);
         pimpl_->http_client_->check_response(response, operation_name);
 
-        internal::get_logger()->info("Successfully " + operation_name + " cluster id=" + cluster_id);
+        internal::get_logger()->info("Successfully " + operation_name + " compute cluster id=" + cluster_id);
         return true;
     }
 
-    bool Compute::start_cluster(const std::string& cluster_id) {
-        return cluster_operation(cluster_id, "/clusters/start", "Starting");
+    bool Compute::start_compute(const std::string& cluster_id) {
+        return compute_operation(cluster_id, "/clusters/start", "startCompute");
     }
 
-    bool Compute::terminate_cluster(const std::string& cluster_id) {
-        return cluster_operation(cluster_id, "/clusters/delete", "Terminating");
+    bool Compute::terminate_compute(const std::string& cluster_id) {
+        return compute_operation(cluster_id, "/clusters/delete", "terminateCompute");
     }
 
-    bool Compute::restart_cluster(const std::string& cluster_id) {
-        return cluster_operation(cluster_id, "/clusters/restart", "Restarting");
+    bool Compute::restart_compute(const std::string& cluster_id) {
+        return compute_operation(cluster_id, "/clusters/restart", "restartCompute");
     }
 
     // Private Methods
-    std::vector<Cluster> Compute::parse_clusters_list(const std::string& json_str ) {
+    std::vector<Cluster> Compute::parse_compute_list(const std::string& json_str) {
         std::vector<Cluster> clusters;
 
         try {
@@ -85,20 +85,20 @@ namespace databricks {
             }
 
             for (const auto& cluster_json : j["clusters"]) {
-                clusters.push_back(parse_cluster(cluster_json.dump()));
+                clusters.push_back(parse_compute(cluster_json.dump()));
             }
 
-            internal::get_logger()->info("Parsed " + std::to_string(clusters.size()) + " clusters");
+            internal::get_logger()->info("Parsed " + std::to_string(clusters.size()) + " compute clusters");
         } catch (const json::exception& e) {
-            internal::get_logger()->error("Failed to parse clusters list: " +
+            internal::get_logger()->error("Failed to parse compute clusters list: " +
         std::string(e.what()));
-            throw std::runtime_error("Failed to parse clusters list: " + std::string(e.what()));
+            throw std::runtime_error("Failed to parse compute clusters list: " + std::string(e.what()));
         }
 
         return clusters;
     }
 
-    Cluster Compute::parse_cluster(const std::string& json_str ) {
+    Cluster Compute::parse_compute(const std::string& json_str) {
         try {
             auto j = json::parse(json_str);
             Cluster cluster;
@@ -106,7 +106,7 @@ namespace databricks {
             cluster.cluster_id = j.value("cluster_id", "");
             cluster.cluster_name = j.value("cluster_name", "");
             cluster.state = j.value("state", "");
-            cluster.creater_user_name = j.value("creator_user_name", "");
+            cluster.creator_user_name = j.value("creator_user_name", "");
             cluster.start_time = j.value("start_time", uint64_t(0));
             cluster.terminated_time = j.value("terminated_time", uint64_t(0));
             cluster.spark_version = j.value("spark_version", "");
@@ -124,7 +124,7 @@ namespace databricks {
 
             return cluster;
         } catch (const json::exception& e) {
-            throw std::runtime_error("Failed to parse Cluster JSON: " + std::string(e.what()));
+            throw std::runtime_error("Failed to parse Compute Cluster JSON: " + std::string(e.what()));
         }
     }
     
