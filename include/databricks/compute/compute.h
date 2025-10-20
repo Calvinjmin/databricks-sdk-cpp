@@ -53,6 +53,14 @@ namespace databricks {
              * @throws std::runtime_error if the API request fails
              */
             std::vector<Cluster> list_compute();
+            
+            /**
+             * @brief Create a new Spark Cluster 
+             * 
+             * @param cluster Create a cluster in Databricks with Cluster Configs
+             * @return true if the operation was successful
+             */
+            bool create_compute(const Cluster& cluster_config);
 
             /**
              * @brief Get detailed information about a specific compute cluster
@@ -94,14 +102,6 @@ namespace databricks {
              * @note This will terminate and then start the cluster with the same configuration.
              */
             bool restart_compute(const std::string& cluster_id);
-
-            /**
-             * @brief Create a new Spark Cluster 
-             * 
-             * @param cluster Create a cluster in Databricks with Cluster Configs
-             * @return true if the operation was successful
-             */
-            bool create_compute(const Cluster& cluster_config);
 
         private:
             class Impl;
