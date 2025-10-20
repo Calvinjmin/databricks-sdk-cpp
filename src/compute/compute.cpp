@@ -72,7 +72,29 @@ namespace databricks {
         return compute_operation(cluster_id, "/clusters/restart", "restartCompute");
     }
 
-    bool Compute::create_compute(const Compute& cluster_config) {
+    bool Compute::create_compute(const Cluster& cluster_config) {
+        internal::get_logger()->info("Creating compute cluster" + cluster_config.cluster_name);
+
+        // Build JSON Body
+        json body_json;
+        body_json["cluster_name"] = cluster_config.cluster_name;
+        body_json["spark_version"] = cluster_config.spark_version; 
+        body_json["node_type_id"] = cluster_config.node_type_id; 
+        body_json["num_workers"] = cluster_config.num_workers; 
+
+        // Add Custom Tags
+        if(!cluster_config.custom_tags.empty()) {
+            body_json["custom_tags"] = cluster_config.custom_tags;
+        }
+
+        std::string body = body_json.dump();
+        internal::get_logger()->debug("Create compute request body" + body);
+
+        // API Request
+        auto response = pimpl_->http_client_->post("/clusters/create", body);
+        pimpl_->http_client_->check_response(response, "createCompute");
+
+        internal::get_logger()->info("Successfully created compute cluster: " + cluster_config.cluster_name);
         return true;
     }
 

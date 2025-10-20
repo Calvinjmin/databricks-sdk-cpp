@@ -101,7 +101,7 @@ namespace databricks {
              * @param cluster Create a cluster in Databricks with Cluster Configs
              * @return true if the operation was successful
              */
-            bool create_compute(const Compute &cluster_config);
+            bool create_compute(const Cluster& cluster_config);
 
         private:
             class Impl;
