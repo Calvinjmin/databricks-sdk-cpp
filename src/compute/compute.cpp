@@ -72,6 +72,10 @@ namespace databricks {
         return compute_operation(cluster_id, "/clusters/restart", "restartCompute");
     }
 
+    bool Compute::create_compute(const Compute& cluster_config) {
+        return true;
+    }
+
     // Private Methods
     std::vector<Cluster> Compute::parse_compute_list(const std::string& json_str) {
         std::vector<Cluster> clusters;

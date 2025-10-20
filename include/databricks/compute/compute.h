@@ -95,6 +95,14 @@ namespace databricks {
              */
             bool restart_compute(const std::string& cluster_id);
 
+            /**
+             * @brief Create a new Spark Cluster 
+             * 
+             * @param cluster Create a cluster in Databricks with Cluster Configs
+             * @return true if the operation was successful
+             */
+            bool create_compute(const Compute &cluster_config);
+
         private:
             class Impl;
             std::unique_ptr<Impl> pimpl_;
