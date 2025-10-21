@@ -2,7 +2,7 @@
 
 # Project information
 PROJECT_NAME           = "Databricks C++ SDK"
-PROJECT_NUMBER         = "0.2.0"
+PROJECT_NUMBER         = "0.2.2"
 PROJECT_BRIEF          = "Interact with Databricks via an SDK"
 OUTPUT_DIRECTORY       = docs
 
