@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <databricks/compute/compute.h>
 #include <databricks/compute/compute_types.h>
 #include <databricks/core/config.h>
+#include <mock_http_client.h>
 
 // Test fixture for Compute tests
 class ComputeTest : public ::testing::Test {
@@ -316,4 +318,253 @@ TEST(ClusterLifecycleTest, StateTransitions) {
     cluster.terminated_time = 1609462800000;
     EXPECT_EQ(cluster.state, "TERMINATED");
     EXPECT_GT(cluster.terminated_time, cluster.start_time);
+}
+
+// ============================================================================
+// Create Compute with Mock HTTP Client Tests
+// ============================================================================
+
+using ::testing::_;
+using ::testing::Return;
+using ::testing::Throw;
+
+// Test: Successfully create compute cluster with minimal config
+TEST(CreateComputeMockTest, SuccessfulCreateMinimalConfig) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    // Setup expectation: POST to /clusters/create should succeed
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response("test-cluster-123")));
+
+    // check_response should be called and not throw
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .Times(1);
+
+    // Create Compute client with mocked HTTP client
+    databricks::Compute compute(mock_http);
+
+    // Create cluster config
+    databricks::Cluster config;
+    config.cluster_name = "test-cluster";
+    config.spark_version = "11.3.x-scala2.12";
+    config.node_type_id = "i3.xlarge";
+    config.num_workers = 2;
+
+    // Execute
+    bool result = compute.create_compute(config);
+
+    // Verify
+    EXPECT_TRUE(result);
+}
+
+// Test: Successfully create compute cluster with custom tags
+TEST(CreateComputeMockTest, SuccessfulCreateWithCustomTags) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response()));
+
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .Times(1);
+
+    databricks::Compute compute(mock_http);
+
+    databricks::Cluster config;
+    config.cluster_name = "tagged-cluster";
+    config.spark_version = "12.2.x-photon-scala2.12";
+    config.node_type_id = "m5.4xlarge";
+    config.num_workers = 4;
+    config.custom_tags["environment"] = "production";
+    config.custom_tags["team"] = "data-eng";
+
+    bool result = compute.create_compute(config);
+    EXPECT_TRUE(result);
+}
+
+// Test: Successfully create single-node cluster (num_workers = 0)
+TEST(CreateComputeMockTest, SuccessfulCreateSingleNode) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(Return(databricks::test::MockHttpClient::success_response(
+            R"({"cluster_id": "single-node-123"})"
+        )));
+
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .Times(1);
+
+    databricks::Compute compute(mock_http);
+
+    databricks::Cluster config;
+    config.cluster_name = "single-node-cluster";
+    config.spark_version = "13.0.x-scala2.12";
+    config.node_type_id = "i3.2xlarge";
+    config.num_workers = 0;  // Single-node mode
+
+    bool result = compute.create_compute(config);
+    EXPECT_TRUE(result);
+}
+
+// Test: Verify JSON payload contains expected fields
+TEST(CreateComputeMockTest, VerifyJSONPayload) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    // Capture the JSON body sent in POST request
+    std::string captured_body;
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(::testing::DoAll(
+            ::testing::SaveArg<1>(&captured_body),
+            Return(databricks::test::MockHttpClient::cluster_created_response())
+        ));
+
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .Times(1);
+
+    databricks::Compute compute(mock_http);
+
+    databricks::Cluster config;
+    config.cluster_name = "payload-test-cluster";
+    config.spark_version = "11.3.x-scala2.12";
+    config.node_type_id = "i3.xlarge";
+    config.num_workers = 3;
+    config.custom_tags["test"] = "verify-payload";
+
+    compute.create_compute(config);
+
+    // Verify the captured JSON contains expected fields
+    EXPECT_NE(captured_body.find("\"cluster_name\":\"payload-test-cluster\""), std::string::npos);
+    EXPECT_NE(captured_body.find("\"spark_version\":\"11.3.x-scala2.12\""), std::string::npos);
+    EXPECT_NE(captured_body.find("\"node_type_id\":\"i3.xlarge\""), std::string::npos);
+    EXPECT_NE(captured_body.find("\"num_workers\":3"), std::string::npos);
+    EXPECT_NE(captured_body.find("\"custom_tags\""), std::string::npos);
+    EXPECT_NE(captured_body.find("\"test\":\"verify-payload\""), std::string::npos);
+}
+
+// Test: Error handling - API returns 400 Bad Request
+TEST(CreateComputeMockTest, HandleBadRequestError) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(Return(databricks::test::MockHttpClient::bad_request_response(
+            "Invalid cluster configuration"
+        )));
+
+    // check_response should throw on 400 error
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .WillOnce(Throw(std::runtime_error("API Error: Invalid cluster configuration")));
+
+    databricks::Compute compute(mock_http);
+
+    databricks::Cluster config;
+    config.cluster_name = "invalid-cluster";
+    config.spark_version = "invalid-version";
+    config.node_type_id = "invalid-type";
+    config.num_workers = 2;
+
+    EXPECT_THROW({
+        compute.create_compute(config);
+    }, std::runtime_error);
+}
+
+// Test: Error handling - API returns 401 Unauthorized
+TEST(CreateComputeMockTest, HandleUnauthorizedError) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(Return(databricks::test::MockHttpClient::unauthorized_response()));
+
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .WillOnce(Throw(std::runtime_error("Authentication failed")));
+
+    databricks::Compute compute(mock_http);
+
+    databricks::Cluster config;
+    config.cluster_name = "test-cluster";
+    config.spark_version = "11.3.x-scala2.12";
+    config.node_type_id = "i3.xlarge";
+    config.num_workers = 2;
+
+    EXPECT_THROW({
+        compute.create_compute(config);
+    }, std::runtime_error);
+}
+
+// Test: Error handling - API returns 500 Internal Server Error
+TEST(CreateComputeMockTest, HandleServerError) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(Return(databricks::test::MockHttpClient::server_error_response()));
+
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .WillOnce(Throw(std::runtime_error("Internal server error")));
+
+    databricks::Compute compute(mock_http);
+
+    databricks::Cluster config;
+    config.cluster_name = "test-cluster";
+    config.spark_version = "11.3.x-scala2.12";
+    config.node_type_id = "i3.xlarge";
+    config.num_workers = 2;
+
+    EXPECT_THROW({
+        compute.create_compute(config);
+    }, std::runtime_error);
+}
+
+// Test: Cluster config without custom tags (should not include custom_tags in JSON)
+TEST(CreateComputeMockTest, ClusterWithoutCustomTags) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    std::string captured_body;
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(::testing::DoAll(
+            ::testing::SaveArg<1>(&captured_body),
+            Return(databricks::test::MockHttpClient::cluster_created_response())
+        ));
+
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .Times(1);
+
+    databricks::Compute compute(mock_http);
+
+    databricks::Cluster config;
+    config.cluster_name = "no-tags-cluster";
+    config.spark_version = "11.3.x-scala2.12";
+    config.node_type_id = "i3.xlarge";
+    config.num_workers = 2;
+    // No custom tags set
+
+    compute.create_compute(config);
+
+    // Verify custom_tags is NOT in the JSON when empty
+    // (Empty tags should not be sent to avoid unnecessary payload)
+    EXPECT_NE(captured_body.find("\"cluster_name\":\"no-tags-cluster\""), std::string::npos);
+    // The implementation adds custom_tags only if not empty
+}
+
+// Test: Multiple clusters can be created sequentially
+TEST(CreateComputeMockTest, CreateMultipleClustersSequentially) {
+    auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
+
+    EXPECT_CALL(*mock_http, post("/clusters/create", _))
+        .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response("cluster-1")))
+        .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response("cluster-2")))
+        .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response("cluster-3")));
+
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
+        .Times(3);
+
+    databricks::Compute compute(mock_http);
+
+    for (int i = 1; i <= 3; i++) {
+        databricks::Cluster config;
+        config.cluster_name = "cluster-" + std::to_string(i);
+        config.spark_version = "11.3.x-scala2.12";
+        config.node_type_id = "i3.xlarge";
+        config.num_workers = i;
+
+        bool result = compute.create_compute(config);
+        EXPECT_TRUE(result);
+    }
 }

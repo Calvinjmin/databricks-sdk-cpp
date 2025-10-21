@@ -457,7 +457,7 @@ std::cout << "Connected to: " << auth.host << std::endl;
 std::cout << "Using warehouse: " << sql.http_path << std::endl;
 ```
 
-For a complete example, see `examples/basic/modular_config_example.cpp`.
+For a complete example, see `examples/simple_query.cpp`.
 
 ## Running Examples
 
@@ -493,58 +493,23 @@ set -a; source .env; set +a
 
 ### Run Examples
 
-After building with `BUILD_EXAMPLES=ON`, examples are organized by feature:
+After building with `BUILD_EXAMPLES=ON`, the following examples are available:
 
-### Basic Examples
 ```bash
-# Simple SQL query
-./examples/simple_query
+# SQL query execution with parameterized queries
+./build/examples/simple_query
 
 # Jobs API - list jobs, get details, trigger runs
-./examples/jobs_example
+./build/examples/jobs_example
+
+# Compute API - manage clusters, create/start/stop/terminate
+./build/examples/compute_example
 ```
 
-### Connection Pooling Examples
-```bash
-# Transparent connection pooling
-./examples/transparent_pooling
-
-# Benchmark pooling performance (measure actual speedup)
-./examples/benchmark [num_queries]
-```
-
-### Async Examples
-```bash
-# Async operations
-./examples/async_operations
-
-# Combined pool + async (best performance)
-./examples/pool_async_combined
-```
-
-### Testing Pooling Performance
-
-To measure the actual performance improvement from connection pooling:
-
-```bash
-cd build
-./examples/benchmark 10
-```
-
-This runs 10 queries with and without pooling, showing:
-- Total time comparison
-- Per-query time breakdown
-- Speedup factor (typically 2-10x faster)
-- Connection overhead estimation
-
-Example output:
-```
-Without pooling: 5234ms total
-With pooling:    892ms total
-
-Time saved:      4342ms (83.0% faster)
-Speedup:         5.87x
-```
+Each example demonstrates a different aspect of the SDK:
+- **simple_query**: Basic SQL execution and parameterized queries
+- **jobs_example**: Jobs API for workflow automation
+- **compute_example**: Compute/Clusters API for cluster management
 
 ## Performance Considerations
 
@@ -629,7 +594,7 @@ int main() {
 - Timestamps returned as Unix milliseconds (`uint64_t`)
 - Automatic error handling with descriptive messages
 
-For a complete example, see `examples/basic/jobs_example.cpp`.
+For a complete example, see `examples/jobs_example.cpp`.
 
 ### Compute/Clusters API
 

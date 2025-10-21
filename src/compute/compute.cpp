@@ -1,5 +1,6 @@
 #include "databricks/compute/compute.h"
 #include "../internal/http_client.h"
+#include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
 
 #include <nlohmann/json.hpp>
@@ -9,15 +10,23 @@ using json = nlohmann::json;
 namespace databricks {
     class Compute::Impl {
         public:
+            // Constructor for production use (creates real HttpClient)
             explicit Impl(const AuthConfig& auth)
-                : http_client_( std::make_unique<internal::HttpClient>(auth) ){}
+                : http_client_( std::make_shared<internal::HttpClient>(auth) ){}
 
-            std::unique_ptr<internal::HttpClient> http_client_;
+            // Constructor for testing (accepts injected client)
+            explicit Impl(std::shared_ptr<internal::IHttpClient> client)
+                : http_client_(std::move(client)) {}
+
+            std::shared_ptr<internal::IHttpClient> http_client_;
     };
 
     Compute::Compute(const AuthConfig& auth)
         : pimpl_(std::make_unique<Impl>(auth)) {}
-    
+
+    Compute::Compute(std::shared_ptr<internal::IHttpClient> http_client)
+        : pimpl_(std::make_unique<Impl>(std::move(http_client))) {}
+
     Compute::~Compute() = default;
 
     // Public Methods
