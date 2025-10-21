@@ -18,4 +18,4 @@
 - [ ] Code builds successfully
 - [ ] Tests pass
 - [ ] Documentation updated (if needed)
-
+- [ ] Update version and tag
