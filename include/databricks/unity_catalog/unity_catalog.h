@@ -48,8 +48,9 @@ namespace databricks {
         /**
          * @brief Construct a Unity Catalog API client
          * @param auth Authentication configuration with host and token
+         * @param api_version Unity Catalog API version to use (default: "2.1")
          */
-        explicit UnityCatalog(const AuthConfig& auth);
+        explicit UnityCatalog(const AuthConfig& auth, const std::string& api_version = "2.1");
 
         /**
          * @brief Construct a Unity Catalog API client with dependency injection (for testing)

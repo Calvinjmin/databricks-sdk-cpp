@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdint>
 #include <optional>
+#include <nlohmann/json_fwd.hpp>
 
 namespace databricks {
 
@@ -175,5 +176,27 @@ namespace databricks {
         std::optional<std::string> owner;           ///< New owner
         std::map<std::string, std::string> properties; ///< Updated properties
     };
+
+    // ==================== JSON SERIALIZATION ====================
+
+    /**
+     * @brief Convert CreateCatalogRequest to JSON
+     */
+    void to_json(nlohmann::json& j, const CreateCatalogRequest& req);
+
+    /**
+     * @brief Convert UpdateCatalogRequest to JSON
+     */
+    void to_json(nlohmann::json& j, const UpdateCatalogRequest& req);
+
+    /**
+     * @brief Convert CreateSchemaRequest to JSON
+     */
+    void to_json(nlohmann::json& j, const CreateSchemaRequest& req);
+
+    /**
+     * @brief Convert UpdateSchemaRequest to JSON
+     */
+    void to_json(nlohmann::json& j, const UpdateSchemaRequest& req);
 
 } // namespace databricks

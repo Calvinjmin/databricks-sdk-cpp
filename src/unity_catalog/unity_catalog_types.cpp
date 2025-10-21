@@ -1,6 +1,9 @@
 #include "databricks/unity_catalog/unity_catalog_types.h"
 
+#include <nlohmann/json.hpp>
 #include <algorithm>
+
+using json = nlohmann::json;
 
 namespace databricks {
 
@@ -67,6 +70,83 @@ namespace databricks {
             case TableTypeEnum::UNKNOWN:
             default:
                 return "UNKNOWN";
+        }
+    }
+
+    // ==================== JSON SERIALIZATION ====================
+
+    void to_json(json& j, const CreateCatalogRequest& req) {
+        j = json{{"name", req.name}};
+
+        if (!req.comment.empty()) {
+            j["comment"] = req.comment;
+        }
+
+        if (!req.properties.empty()) {
+            j["properties"] = req.properties;
+        }
+
+        if (req.storage_root.has_value()) {
+            j["storage_root"] = req.storage_root.value();
+        }
+    }
+
+    void to_json(json& j, const UpdateCatalogRequest& req) {
+        j = json{{"name", req.name}};
+
+        if (req.new_name.has_value()) {
+            j["new_name"] = req.new_name.value();
+        }
+
+        if (req.comment.has_value()) {
+            j["comment"] = req.comment.value();
+        }
+
+        if (req.owner.has_value()) {
+            j["owner"] = req.owner.value();
+        }
+
+        if (!req.properties.empty()) {
+            j["properties"] = req.properties;
+        }
+    }
+
+    void to_json(json& j, const CreateSchemaRequest& req) {
+        j = json{
+            {"name", req.name},
+            {"catalog_name", req.catalog_name}
+        };
+
+        if (!req.comment.empty()) {
+            j["comment"] = req.comment;
+        }
+
+        if (!req.properties.empty()) {
+            j["properties"] = req.properties;
+        }
+
+        if (req.storage_root.has_value()) {
+            j["storage_root"] = req.storage_root.value();
+        }
+    }
+
+    void to_json(json& j, const UpdateSchemaRequest& req) {
+        j = json{{"full_name", req.full_name}};
+
+        if (req.new_name.has_value()) {
+            j["new_name"] = req.new_name.value();
+        }
+
+        if (req.comment.has_value()) {
+            j["comment"] = req.comment.value();
+        }
+
+        if (req.owner.has_value()) {
+            j["owner"] = req.owner.value();
+        }
+
+        if (!req.properties.empty()) {
+            j["properties"] = req.properties;
         }
     }
 

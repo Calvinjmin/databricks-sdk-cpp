@@ -97,6 +97,7 @@ set(SOURCES
     src/compute/compute_types.cpp
     src/compute/compute.cpp
     src/connection_pool.cpp
+    src/unity_catalog/unity_catalog_types.cpp
     src/unity_catalog/unity_catalog.cpp
     src/internal/pool_manager.cpp
     src/internal/logger.cpp

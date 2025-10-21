@@ -40,7 +40,8 @@ namespace databricks {
             return total_size;
         }
 
-        HttpClient::HttpClient(const AuthConfig& auth) : auth_(auth) {
+        HttpClient::HttpClient(const AuthConfig& auth, const std::string& api_version)
+            : auth_(auth), api_version_(api_version) {
             static bool curl_initialized = false;
 
             // Initialize Curl Client
@@ -51,7 +52,7 @@ namespace databricks {
         }
 
         std::string HttpClient::get_base_url() const {
-            return auth_.host + "/api/2.2";
+            return auth_.host + "/api/" + api_version_;
         }
 
         std::map<std::string, std::string> HttpClient::get_headers() const {

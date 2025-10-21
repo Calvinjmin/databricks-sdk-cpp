@@ -12,9 +12,9 @@ namespace databricks {
 
     class UnityCatalog::Impl {
     public:
-        // Constructor for production use (creates real HttpClient)
-        explicit Impl(const AuthConfig& auth)
-            : http_client_(std::make_shared<internal::HttpClient>(auth)) {}
+        // Constructor for production use (creates real HttpClient with Unity Catalog API version)
+        explicit Impl(const AuthConfig& auth, const std::string& api_version = "2.1")
+            : http_client_(std::make_shared<internal::HttpClient>(auth, api_version)) {}
 
         // Constructor for testing (accepts injected client)
         explicit Impl(std::shared_ptr<internal::IHttpClient> client)
@@ -25,8 +25,8 @@ namespace databricks {
 
     // ==================== CONSTRUCTORS & DESTRUCTOR ====================
 
-    UnityCatalog::UnityCatalog(const AuthConfig& auth)
-        : pimpl_(std::make_unique<Impl>(auth)) {}
+    UnityCatalog::UnityCatalog(const AuthConfig& auth, const std::string& api_version)
+        : pimpl_(std::make_unique<Impl>(auth, api_version)) {}
 
     UnityCatalog::UnityCatalog(std::shared_ptr<internal::IHttpClient> http_client)
         : pimpl_(std::make_unique<Impl>(std::move(http_client))) {}
@@ -38,8 +38,7 @@ namespace databricks {
     std::vector<CatalogInfo> UnityCatalog::list_catalogs() {
         internal::get_logger()->info("Listing Unity Catalog catalogs");
 
-        // TODO: Make API request to /api/2.1/unity-catalog/catalogs
-        auto response = pimpl_->http_client_->get("/api/2.1/unity-catalog/catalogs");
+        auto response = pimpl_->http_client_->get("/unity-catalog/catalogs");
         pimpl_->http_client_->check_response(response, "listCatalogs");
 
         internal::get_logger()->debug("Catalogs list response: " + response.body);
@@ -49,8 +48,7 @@ namespace databricks {
     CatalogInfo UnityCatalog::get_catalog(const std::string& catalog_name) {
         internal::get_logger()->info("Getting catalog details for catalog=" + catalog_name);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/catalogs/{name}
-        auto response = pimpl_->http_client_->get("/api/2.1/unity-catalog/catalogs/" + catalog_name);
+        auto response = pimpl_->http_client_->get("/unity-catalog/catalogs/" + catalog_name);
         pimpl_->http_client_->check_response(response, "getCatalog");
 
         internal::get_logger()->debug("Catalog details response: " + response.body);
@@ -60,27 +58,11 @@ namespace databricks {
     CatalogInfo UnityCatalog::create_catalog(const CreateCatalogRequest& request) {
         internal::get_logger()->info("Creating catalog: " + request.name);
 
-        // TODO: Build JSON body from CreateCatalogRequest
-        json body_json;
-        body_json["name"] = request.name;
-
-        if (!request.comment.empty()) {
-            body_json["comment"] = request.comment;
-        }
-
-        if (!request.properties.empty()) {
-            body_json["properties"] = request.properties;
-        }
-
-        if (request.storage_root.has_value()) {
-            body_json["storage_root"] = request.storage_root.value();
-        }
-
+        json body_json = request;
         std::string body = body_json.dump();
         internal::get_logger()->debug("Create catalog request body: " + body);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/catalogs
-        auto response = pimpl_->http_client_->post("/api/2.1/unity-catalog/catalogs", body);
+        auto response = pimpl_->http_client_->post("/unity-catalog/catalogs", body);
         pimpl_->http_client_->check_response(response, "createCatalog");
 
         internal::get_logger()->info("Successfully created catalog: " + request.name);
@@ -90,30 +72,11 @@ namespace databricks {
     CatalogInfo UnityCatalog::update_catalog(const UpdateCatalogRequest& request) {
         internal::get_logger()->info("Updating catalog: " + request.name);
 
-        // TODO: Build JSON body from UpdateCatalogRequest
-        json body_json;
-
-        if (request.new_name.has_value()) {
-            body_json["new_name"] = request.new_name.value();
-        }
-
-        if (request.comment.has_value()) {
-            body_json["comment"] = request.comment.value();
-        }
-
-        if (request.owner.has_value()) {
-            body_json["owner"] = request.owner.value();
-        }
-
-        if (!request.properties.empty()) {
-            body_json["properties"] = request.properties;
-        }
-
+        json body_json = request;
         std::string body = body_json.dump();
         internal::get_logger()->debug("Update catalog request body: " + body);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/catalogs/{name} (PATCH)
-        auto response = pimpl_->http_client_->post("/api/2.1/unity-catalog/catalogs/" + request.name, body);
+        auto response = pimpl_->http_client_->post("/unity-catalog/catalogs/" + request.name, body);
         pimpl_->http_client_->check_response(response, "updateCatalog");
 
         internal::get_logger()->info("Successfully updated catalog: " + request.name);
@@ -123,7 +86,7 @@ namespace databricks {
     bool UnityCatalog::delete_catalog(const std::string& catalog_name, bool force) {
         internal::get_logger()->info("Deleting catalog: " + catalog_name);
 
-        // TODO: Build endpoint with force parameter if needed
+        // Force Delete Endpoint
         std::string endpoint = "/api/2.1/unity-catalog/catalogs/" + catalog_name;
         if (force) {
             endpoint += "?force=true";
@@ -131,7 +94,6 @@ namespace databricks {
 
         internal::get_logger()->debug("Delete catalog endpoint: " + endpoint);
 
-        // TODO: Make DELETE API request (using post with empty body for now)
         auto response = pimpl_->http_client_->post(endpoint, "");
         pimpl_->http_client_->check_response(response, "deleteCatalog");
 
@@ -144,8 +106,7 @@ namespace databricks {
     std::vector<SchemaInfo> UnityCatalog::list_schemas(const std::string& catalog_name) {
         internal::get_logger()->info("Listing schemas in catalog: " + catalog_name);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/schemas?catalog_name={catalog}
-        auto response = pimpl_->http_client_->get("/api/2.1/unity-catalog/schemas?catalog_name=" + catalog_name);
+        auto response = pimpl_->http_client_->get("/unity-catalog/schemas?catalog_name=" + catalog_name);
         pimpl_->http_client_->check_response(response, "listSchemas");
 
         internal::get_logger()->debug("Schemas list response: " + response.body);
@@ -155,8 +116,7 @@ namespace databricks {
     SchemaInfo UnityCatalog::get_schema(const std::string& full_name) {
         internal::get_logger()->info("Getting schema details for: " + full_name);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/schemas/{full_name}
-        auto response = pimpl_->http_client_->get("/api/2.1/unity-catalog/schemas/" + full_name);
+        auto response = pimpl_->http_client_->get("/unity-catalog/schemas/" + full_name);
         pimpl_->http_client_->check_response(response, "getSchema");
 
         internal::get_logger()->debug("Schema details response: " + response.body);
@@ -166,28 +126,11 @@ namespace databricks {
     SchemaInfo UnityCatalog::create_schema(const CreateSchemaRequest& request) {
         internal::get_logger()->info("Creating schema: " + request.catalog_name + "." + request.name);
 
-        // TODO: Build JSON body from CreateSchemaRequest
-        json body_json;
-        body_json["name"] = request.name;
-        body_json["catalog_name"] = request.catalog_name;
-
-        if (!request.comment.empty()) {
-            body_json["comment"] = request.comment;
-        }
-
-        if (!request.properties.empty()) {
-            body_json["properties"] = request.properties;
-        }
-
-        if (request.storage_root.has_value()) {
-            body_json["storage_root"] = request.storage_root.value();
-        }
-
+        json body_json = request;
         std::string body = body_json.dump();
         internal::get_logger()->debug("Create schema request body: " + body);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/schemas
-        auto response = pimpl_->http_client_->post("/api/2.1/unity-catalog/schemas", body);
+        auto response = pimpl_->http_client_->post("/unity-catalog/schemas", body);
         pimpl_->http_client_->check_response(response, "createSchema");
 
         internal::get_logger()->info("Successfully created schema: " + request.catalog_name + "." + request.name);
@@ -197,30 +140,11 @@ namespace databricks {
     SchemaInfo UnityCatalog::update_schema(const UpdateSchemaRequest& request) {
         internal::get_logger()->info("Updating schema: " + request.full_name);
 
-        // TODO: Build JSON body from UpdateSchemaRequest
-        json body_json;
-
-        if (request.new_name.has_value()) {
-            body_json["new_name"] = request.new_name.value();
-        }
-
-        if (request.comment.has_value()) {
-            body_json["comment"] = request.comment.value();
-        }
-
-        if (request.owner.has_value()) {
-            body_json["owner"] = request.owner.value();
-        }
-
-        if (!request.properties.empty()) {
-            body_json["properties"] = request.properties;
-        }
-
+        json body_json = request;
         std::string body = body_json.dump();
         internal::get_logger()->debug("Update schema request body: " + body);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/schemas/{full_name} (PATCH)
-        auto response = pimpl_->http_client_->post("/api/2.1/unity-catalog/schemas/" + request.full_name, body);
+        auto response = pimpl_->http_client_->post("/unity-catalog/schemas/" + request.full_name, body);
         pimpl_->http_client_->check_response(response, "updateSchema");
 
         internal::get_logger()->info("Successfully updated schema: " + request.full_name);
@@ -230,8 +154,7 @@ namespace databricks {
     bool UnityCatalog::delete_schema(const std::string& full_name) {
         internal::get_logger()->info("Deleting schema: " + full_name);
 
-        // TODO: Make DELETE API request to /api/2.1/unity-catalog/schemas/{full_name}
-        auto response = pimpl_->http_client_->post("/api/2.1/unity-catalog/schemas/" + full_name, "");
+        auto response = pimpl_->http_client_->post("/unity-catalog/schemas/" + full_name, "");
         pimpl_->http_client_->check_response(response, "deleteSchema");
 
         internal::get_logger()->info("Successfully deleted schema: " + full_name);
@@ -244,8 +167,8 @@ namespace databricks {
                                                      const std::string& schema_name) {
         internal::get_logger()->info("Listing tables in " + catalog_name + "." + schema_name);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/tables?catalog_name={catalog}&schema_name={schema}
-        std::string endpoint = "/api/2.1/unity-catalog/tables?catalog_name=" + catalog_name +
+        // Create Endpoint with Catalog and Schema name
+        std::string endpoint = "/unity-catalog/tables?catalog_name=" + catalog_name +
                               "&schema_name=" + schema_name;
         auto response = pimpl_->http_client_->get(endpoint);
         pimpl_->http_client_->check_response(response, "listTables");
@@ -257,8 +180,7 @@ namespace databricks {
     TableInfo UnityCatalog::get_table(const std::string& full_name) {
         internal::get_logger()->info("Getting table details for: " + full_name);
 
-        // TODO: Make API request to /api/2.1/unity-catalog/tables/{full_name}
-        auto response = pimpl_->http_client_->get("/api/2.1/unity-catalog/tables/" + full_name);
+        auto response = pimpl_->http_client_->get("/unity-catalog/tables/" + full_name);
         pimpl_->http_client_->check_response(response, "getTable");
 
         internal::get_logger()->debug("Table details response: " + response.body);
@@ -268,8 +190,7 @@ namespace databricks {
     bool UnityCatalog::delete_table(const std::string& full_name) {
         internal::get_logger()->info("Deleting table: " + full_name);
 
-        // TODO: Make DELETE API request to /api/2.1/unity-catalog/tables/{full_name}
-        auto response = pimpl_->http_client_->post("/api/2.1/unity-catalog/tables/" + full_name, "");
+        auto response = pimpl_->http_client_->post("/unity-catalog/tables/" + full_name, "");
         pimpl_->http_client_->check_response(response, "deleteTable");
 
         internal::get_logger()->info("Successfully deleted table: " + full_name);
@@ -283,7 +204,6 @@ namespace databricks {
             auto j = json::parse(json_str);
             CatalogInfo catalog;
 
-            // TODO: Parse all fields from JSON response
             catalog.name = j.value("name", "");
             catalog.comment = j.value("comment", "");
             catalog.owner = j.value("owner", "");
@@ -323,7 +243,6 @@ namespace databricks {
         try {
             auto j = json::parse(json_str);
 
-            // TODO: Parse catalogs array from response
             if (!j.contains("catalogs") || !j["catalogs"].is_array()) {
                 internal::get_logger()->warn("No catalogs array found in response");
                 return catalogs;
@@ -347,7 +266,6 @@ namespace databricks {
             auto j = json::parse(json_str);
             SchemaInfo schema;
 
-            // TODO: Parse all fields from JSON response
             schema.name = j.value("name", "");
             schema.catalog_name = j.value("catalog_name", "");
             schema.comment = j.value("comment", "");
@@ -387,7 +305,6 @@ namespace databricks {
         try {
             auto j = json::parse(json_str);
 
-            // TODO: Parse schemas array from response
             if (!j.contains("schemas") || !j["schemas"].is_array()) {
                 internal::get_logger()->warn("No schemas array found in response");
                 return schemas;
@@ -411,17 +328,33 @@ namespace databricks {
             auto j = json::parse(json_str);
             ColumnInfo column;
 
-            // TODO: Parse all fields from JSON response
             column.name = j.value("name", "");
             column.type_text = j.value("type_text", "");
             column.type_name = j.value("type_name", "");
-            column.position = j.value("position", 0);
+
+            // Parse position (can be number or string)
+            if (j.contains("position")) {
+                if (j["position"].is_number()) {
+                    column.position = j["position"].get<int>();
+                } else if (j["position"].is_string()) {
+                    try {
+                        column.position = std::stoi(j["position"].get<std::string>());
+                    } catch (...) {
+                        column.position = 0;
+                    }
+                }
+            }
+
             column.comment = j.value("comment", "");
             column.nullable = j.value("nullable", true);
 
-            // Parse optional partition index
+            // Parse optional partition index (can be number or string)
             if (j.contains("partition_index") && !j["partition_index"].is_null()) {
-                column.partition_index = j["partition_index"].get<std::string>();
+                if (j["partition_index"].is_string()) {
+                    column.partition_index = j["partition_index"].get<std::string>();
+                } else if (j["partition_index"].is_number()) {
+                    column.partition_index = std::to_string(j["partition_index"].get<int>());
+                }
             }
 
             return column;
@@ -435,7 +368,6 @@ namespace databricks {
             auto j = json::parse(json_str);
             TableInfo table;
 
-            // TODO: Parse all fields from JSON response
             table.name = j.value("name", "");
             table.catalog_name = j.value("catalog_name", "");
             table.schema_name = j.value("schema_name", "");
@@ -474,9 +406,19 @@ namespace databricks {
                 table.view_definition = j["view_definition"].get<std::string>();
             }
 
-            // Parse optional table_id
+            // Parse optional table_id (can be string or number)
             if (j.contains("table_id") && !j["table_id"].is_null()) {
-                table.table_id = j["table_id"].get<uint64_t>();
+                if (j["table_id"].is_string()) {
+                    // Parse string to uint64_t
+                    try {
+                        table.table_id = std::stoull(j["table_id"].get<std::string>());
+                    } catch (...) {
+                        // If conversion fails, leave it unset
+                        internal::get_logger()->warn("Failed to parse table_id as uint64_t");
+                    }
+                } else if (j["table_id"].is_number()) {
+                    table.table_id = j["table_id"].get<uint64_t>();
+                }
             }
 
             return table;
@@ -491,7 +433,6 @@ namespace databricks {
         try {
             auto j = json::parse(json_str);
 
-            // TODO: Parse tables array from response
             if (!j.contains("tables") || !j["tables"].is_array()) {
                 internal::get_logger()->warn("No tables array found in response");
                 return tables;
