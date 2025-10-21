@@ -10,6 +10,11 @@
 #include <cstdint>
 
 namespace databricks {
+    // Forward declaration for dependency injection
+    namespace internal {
+        class IHttpClient;
+    }
+
     /**
      * @brief Client for interacting with the Databricks Jobs API
      *
@@ -39,6 +44,13 @@ namespace databricks {
          * @param auth Authentication configuration with host and token
          */
         explicit Jobs(const AuthConfig& auth);
+
+        /**
+         * @brief Construct a Jobs API client with dependency injection (for testing)
+         * @param http_client Injected HTTP client (use MockHttpClient for unit tests)
+         * @note This constructor is primarily for testing with mock HTTP clients
+         */
+        explicit Jobs(std::shared_ptr<internal::IHttpClient> http_client);
 
         /**
          * @brief Destructor
