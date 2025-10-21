@@ -8,6 +8,11 @@
 #include <memory>
 
 namespace databricks {
+    // Forward declaration for dependency injection
+    namespace internal {
+        class IHttpClient;
+    }
+
     /**
      * @brief Client for interacting with the Databricks Clusters/Compute API
      *
@@ -38,6 +43,13 @@ namespace databricks {
             explicit Compute(const AuthConfig& auth);
 
             /**
+             * @brief Construct a Compute API client with dependency injection (for testing)
+             * @param http_client Injected HTTP client (use MockHttpClient for unit tests)
+             * @note This constructor is primarily for testing with mock HTTP clients
+             */
+            explicit Compute(std::shared_ptr<internal::IHttpClient> http_client);
+
+            /**
              * @brief Destructor
              */
             ~Compute();
@@ -53,6 +65,14 @@ namespace databricks {
              * @throws std::runtime_error if the API request fails
              */
             std::vector<Cluster> list_compute();
+            
+            /**
+             * @brief Create a new Spark Cluster 
+             * 
+             * @param cluster Create a cluster in Databricks with Cluster Configs
+             * @return true if the operation was successful
+             */
+            bool create_compute(const Cluster& cluster_config);
 
             /**
              * @brief Get detailed information about a specific compute cluster

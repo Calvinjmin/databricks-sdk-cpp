@@ -1,5 +1,6 @@
 #include "databricks/compute/compute.h"
 #include "../internal/http_client.h"
+#include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
 
 #include <nlohmann/json.hpp>
@@ -9,15 +10,23 @@ using json = nlohmann::json;
 namespace databricks {
     class Compute::Impl {
         public:
+            // Constructor for production use (creates real HttpClient)
             explicit Impl(const AuthConfig& auth)
-                : http_client_( std::make_unique<internal::HttpClient>(auth) ){}
+                : http_client_( std::make_shared<internal::HttpClient>(auth) ){}
 
-            std::unique_ptr<internal::HttpClient> http_client_;
+            // Constructor for testing (accepts injected client)
+            explicit Impl(std::shared_ptr<internal::IHttpClient> client)
+                : http_client_(std::move(client)) {}
+
+            std::shared_ptr<internal::IHttpClient> http_client_;
     };
 
     Compute::Compute(const AuthConfig& auth)
         : pimpl_(std::make_unique<Impl>(auth)) {}
-    
+
+    Compute::Compute(std::shared_ptr<internal::IHttpClient> http_client)
+        : pimpl_(std::make_unique<Impl>(std::move(http_client))) {}
+
     Compute::~Compute() = default;
 
     // Public Methods
@@ -30,6 +39,32 @@ namespace databricks {
 
         internal::get_logger()->debug("Compute clusters list response: " + response.body);
         return parse_compute_list(response.body);
+    }
+    
+    bool Compute::create_compute(const Cluster& cluster_config) {
+        internal::get_logger()->info("Creating compute cluster" + cluster_config.cluster_name);
+
+        // Build JSON Body
+        json body_json;
+        body_json["cluster_name"] = cluster_config.cluster_name;
+        body_json["spark_version"] = cluster_config.spark_version; 
+        body_json["node_type_id"] = cluster_config.node_type_id; 
+        body_json["num_workers"] = cluster_config.num_workers; 
+
+        // Add Custom Tags
+        if(!cluster_config.custom_tags.empty()) {
+            body_json["custom_tags"] = cluster_config.custom_tags;
+        }
+
+        std::string body = body_json.dump();
+        internal::get_logger()->debug("Create compute request body" + body);
+
+        // API Request
+        auto response = pimpl_->http_client_->post("/clusters/create", body);
+        pimpl_->http_client_->check_response(response, "createCompute");
+
+        internal::get_logger()->info("Successfully created compute cluster: " + cluster_config.cluster_name);
+        return true;
     }
 
     Cluster Compute::get_compute(const std::string& cluster_id){

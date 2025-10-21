@@ -1,5 +1,6 @@
 #include "databricks/jobs/jobs.h"
 #include "../internal/http_client.h"
+#include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
 
 #include <nlohmann/json.hpp>
@@ -16,7 +17,10 @@ namespace databricks {
         explicit Impl(const AuthConfig& auth)
             : http_client_(std::make_unique<internal::HttpClient>(auth)) {}
 
-        std::unique_ptr<internal::HttpClient> http_client_;
+        explicit Impl(std::shared_ptr<internal::IHttpClient> http_client)
+            : http_client_(std::move(http_client)) {}
+
+        std::shared_ptr<internal::IHttpClient> http_client_;
     };
 
     // ============================================================================
@@ -99,6 +103,9 @@ namespace databricks {
 
     Jobs::Jobs(const AuthConfig& auth)
         : pimpl_(std::make_unique<Impl>(auth)) {}
+
+    Jobs::Jobs(std::shared_ptr<internal::IHttpClient> http_client)
+        : pimpl_(std::make_unique<Impl>(std::move(http_client))) {}
 
     Jobs::~Jobs() = default;
 

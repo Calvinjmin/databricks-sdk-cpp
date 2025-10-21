@@ -1,5 +1,6 @@
 #pragma once
 
+#include "http_client_interface.h"
 #include "databricks/core/config.h"
 #include <string>
 #include <map>
@@ -7,41 +8,34 @@
 namespace databricks {
     namespace internal {
         /**
-         * @brief Simple HTTP Response
-         */
-        struct HttpResponse {
-            int status_code;
-            std::string body;
-            std::map<std::string, std::string> headers;
-        };
-
-        /**
          * @brief Internal HTTP Client Wrapper around libcurl
+         *
+         * Production implementation of IHttpClient that makes real HTTP requests.
          */
-        class HttpClient {
+        class HttpClient : public IHttpClient {
             public:
                 explicit HttpClient( const AuthConfig& auth );
 
                 /**
                  * @brief Wrapper around a GET REST API Call
-                 * 
+                 *
                  * @param path URL Path to Get Request
-                 * 
+                 *
                  * @return HttpResponse HTTP Response Object
                  */
-                HttpResponse get( const std::string &path );
+                HttpResponse get( const std::string &path ) override;
 
                 /**
                  * @brief Wrapper around a POST REST API Call
-                 * 
+                 *
                  * @param path URL Path to Post Request
                  * @param json_body Request Payload
-                 * 
+                 *
                  * @return HttpResponse HTTP Response Object
                  */
-                HttpResponse post( const std::string &path, const std::string &json_body );
+                HttpResponse post( const std::string &path, const std::string &json_body ) override;
 
-                void check_response(const HttpResponse& response, const std::string& operation_name ) const;
+                void check_response(const HttpResponse& response, const std::string& operation_name ) const override;
 
             private:
                 AuthConfig auth_;
