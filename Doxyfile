@@ -7,11 +7,11 @@ PROJECT_BRIEF          = "Interact with Databricks via an SDK"
 OUTPUT_DIRECTORY       = docs
 
 # Input configuration
-INPUT                  = include/databricks src README.md
-FILE_PATTERNS          = *.h *.cpp *.md
+INPUT                  = include/databricks README.md
+FILE_PATTERNS          = *.h *.md
 RECURSIVE              = YES
-EXCLUDE                = src/internal
-EXCLUDE_PATTERNS       = */build/* */cmake/*
+EXCLUDE                =
+EXCLUDE_PATTERNS       = */build/* */cmake/* */internal/*
 
 # Output formats
 GENERATE_HTML          = YES
