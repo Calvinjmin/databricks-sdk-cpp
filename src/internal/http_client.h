@@ -14,7 +14,7 @@ namespace databricks {
          */
         class HttpClient : public IHttpClient {
             public:
-                explicit HttpClient( const AuthConfig& auth );
+                explicit HttpClient( const AuthConfig& auth, const std::string& api_version = "2.2" );
 
                 /**
                  * @brief Wrapper around a GET REST API Call
@@ -39,6 +39,7 @@ namespace databricks {
 
             private:
                 AuthConfig auth_;
+                std::string api_version_;
                 std::string get_base_url() const;
                 std::map<std::string, std::string> get_headers() const;
 
