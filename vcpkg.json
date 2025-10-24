@@ -1,6 +1,6 @@
 {
   "name": "databricks-sdk-cpp",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "C++ SDK for Databricks, providing an interface for interacting with Databricks services via ODBC",
   "homepage": "https://github.com/calvinjmin/databricks-sdk-cpp",
   "license": "MIT",
