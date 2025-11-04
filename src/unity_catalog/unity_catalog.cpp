@@ -204,7 +204,30 @@ namespace databricks {
             auto j = json::parse(json_str);
             CatalogInfo catalog;
 
-            catalog.name = j.value("name", "");
+            // Validate required fields BEFORE accessing
+            std::vector<std::string> missing_fields;
+            if (!j.contains("name") || j["name"].is_null()) {
+                missing_fields.push_back("name");
+            }
+
+            if (!missing_fields.empty()) {
+                std::string error = "Missing required fields in Catalog JSON: ";
+                for (size_t i = 0; i < missing_fields.size(); ++i) {
+                    error += missing_fields[i];
+                    if (i < missing_fields.size() - 1) error += ", ";
+                }
+
+                // Include truncated JSON for debugging
+                std::string json_preview = json_str.length() > 200
+                    ? json_str.substr(0, 200) + "... (truncated)"
+                    : json_str;
+                error += "\nJSON received: " + json_preview;
+
+                internal::get_logger()->error(error);
+                throw std::runtime_error(error);
+            }
+
+            catalog.name = j["name"].get<std::string>();
             catalog.comment = j.value("comment", "");
             catalog.owner = j.value("owner", "");
             catalog.catalog_type = j.value("catalog_type", "");
@@ -218,6 +241,11 @@ namespace databricks {
                 for (auto& [key, value] : j["properties"].items()) {
                     if (value.is_string()) {
                         catalog.properties[key] = value.get<std::string>();
+                    } else {
+                        internal::get_logger()->warn(
+                            "Skipping non-string property '{}' in catalog '{}'",
+                            key, catalog.name
+                        );
                     }
                 }
             }
@@ -232,8 +260,31 @@ namespace databricks {
             }
 
             return catalog;
+
+        } catch (const json::parse_error& e) {
+            // JSON is malformed
+            std::string error = "Malformed JSON for Catalog: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
+        } catch (const json::type_error& e) {
+            // Field has wrong type
+            std::string error = "Type error in Catalog JSON: " + std::string(e.what());
+            error += "\nThis usually means a field has unexpected type (e.g., string instead of number)";
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
         } catch (const json::exception& e) {
-            throw std::runtime_error("Failed to parse Catalog JSON: " + std::string(e.what()));
+            // Other JSON library errors
+            std::string error = "Failed to parse Catalog JSON: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
         }
     }
 
@@ -249,13 +300,29 @@ namespace databricks {
             }
 
             for (const auto& catalog_json : j["catalogs"]) {
-                catalogs.push_back(parse_catalog(catalog_json.dump()));
+                try {
+                    catalogs.push_back(parse_catalog(catalog_json.dump()));
+                } catch (const std::exception& e) {
+                    internal::get_logger()->error("Failed to parse individual catalog: {}", e.what());
+                    // Continue parsing other catalogs instead of failing completely
+                }
             }
 
-            internal::get_logger()->info("Parsed " + std::to_string(catalogs.size()) + " catalogs");
+            internal::get_logger()->info("Parsed {} catalogs", catalogs.size());
+
+        } catch (const json::parse_error& e) {
+            std::string error = "Malformed JSON in catalogs list: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
         } catch (const json::exception& e) {
-            internal::get_logger()->error("Failed to parse catalogs list: " + std::string(e.what()));
-            throw std::runtime_error("Failed to parse catalogs list: " + std::string(e.what()));
+            std::string error = "Failed to parse catalogs list: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
         }
 
         return catalogs;
@@ -266,7 +333,25 @@ namespace databricks {
             auto j = json::parse(json_str);
             SchemaInfo schema;
 
-            schema.name = j.value("name", "");
+            // Validate required fields
+            std::vector<std::string> missing_fields;
+            if (!j.contains("name") || j["name"].is_null()) {
+                missing_fields.push_back("name");
+            }
+
+            if (!missing_fields.empty()) {
+                std::string error = "Missing required fields in Schema JSON: ";
+                for (size_t i = 0; i < missing_fields.size(); ++i) {
+                    error += missing_fields[i];
+                    if (i < missing_fields.size() - 1) error += ", ";
+                }
+                error += "\nJSON received: " +
+                         json_str.substr(0, std::min(size_t(200), json_str.length()));
+                internal::get_logger()->error(error);
+                throw std::runtime_error(error);
+            }
+
+            schema.name = j["name"].get<std::string>();
             schema.catalog_name = j.value("catalog_name", "");
             schema.comment = j.value("comment", "");
             schema.owner = j.value("owner", "");
@@ -294,8 +379,27 @@ namespace databricks {
             }
 
             return schema;
+
+        } catch (const json::parse_error& e) {
+            std::string error = "Malformed JSON for Schema: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
+        } catch (const json::type_error& e) {
+            std::string error = "Type error in Schema JSON: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
         } catch (const json::exception& e) {
-            throw std::runtime_error("Failed to parse Schema JSON: " + std::string(e.what()));
+            std::string error = "Failed to parse Schema JSON: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
         }
     }
 
@@ -311,13 +415,29 @@ namespace databricks {
             }
 
             for (const auto& schema_json : j["schemas"]) {
-                schemas.push_back(parse_schema(schema_json.dump()));
+                try {
+                    schemas.push_back(parse_schema(schema_json.dump()));
+                } catch (const std::exception& e) {
+                    internal::get_logger()->error("Failed to parse individual schema: {}", e.what());
+                    // Continue parsing other schemas
+                }
             }
 
-            internal::get_logger()->info("Parsed " + std::to_string(schemas.size()) + " schemas");
+            internal::get_logger()->info("Parsed {} schemas", schemas.size());
+
+        } catch (const json::parse_error& e) {
+            std::string error = "Malformed JSON in schemas list: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
         } catch (const json::exception& e) {
-            internal::get_logger()->error("Failed to parse schemas list: " + std::string(e.what()));
-            throw std::runtime_error("Failed to parse schemas list: " + std::string(e.what()));
+            std::string error = "Failed to parse schemas list: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
         }
 
         return schemas;
@@ -339,7 +459,11 @@ namespace databricks {
                 } else if (j["position"].is_string()) {
                     try {
                         column.position = std::stoi(j["position"].get<std::string>());
-                    } catch (...) {
+                    } catch (const std::exception& e) {
+                        internal::get_logger()->warn(
+                            "Failed to parse position for column '{}': {}",
+                            column.name, e.what()
+                        );
                         column.position = 0;
                     }
                 }
@@ -358,8 +482,20 @@ namespace databricks {
             }
 
             return column;
+
+        } catch (const json::parse_error& e) {
+            std::string error = "Malformed JSON for Column: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
         } catch (const json::exception& e) {
-            throw std::runtime_error("Failed to parse Column JSON: " + std::string(e.what()));
+            std::string error = "Failed to parse Column JSON: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
         }
     }
 
@@ -368,7 +504,25 @@ namespace databricks {
             auto j = json::parse(json_str);
             TableInfo table;
 
-            table.name = j.value("name", "");
+            // Validate required fields
+            std::vector<std::string> missing_fields;
+            if (!j.contains("name") || j["name"].is_null()) {
+                missing_fields.push_back("name");
+            }
+
+            if (!missing_fields.empty()) {
+                std::string error = "Missing required fields in Table JSON: ";
+                for (size_t i = 0; i < missing_fields.size(); ++i) {
+                    error += missing_fields[i];
+                    if (i < missing_fields.size() - 1) error += ", ";
+                }
+                error += "\nJSON received: " +
+                         json_str.substr(0, std::min(size_t(200), json_str.length()));
+                internal::get_logger()->error(error);
+                throw std::runtime_error(error);
+            }
+
+            table.name = j["name"].get<std::string>();
             table.catalog_name = j.value("catalog_name", "");
             table.schema_name = j.value("schema_name", "");
             table.table_type = j.value("table_type", "");
@@ -397,7 +551,15 @@ namespace databricks {
             // Parse columns if present
             if (j.contains("columns") && j["columns"].is_array()) {
                 for (const auto& col_json : j["columns"]) {
-                    table.columns.push_back(parse_column(col_json.dump()));
+                    try {
+                        table.columns.push_back(parse_column(col_json.dump()));
+                    } catch (const std::exception& e) {
+                        internal::get_logger()->warn(
+                            "Failed to parse column in table '{}': {}",
+                            table.name, e.what()
+                        );
+                        // Continue parsing other columns
+                    }
                 }
             }
 
@@ -412,9 +574,11 @@ namespace databricks {
                     // Parse string to uint64_t
                     try {
                         table.table_id = std::stoull(j["table_id"].get<std::string>());
-                    } catch (...) {
-                        // If conversion fails, leave it unset
-                        internal::get_logger()->warn("Failed to parse table_id as uint64_t");
+                    } catch (const std::exception& e) {
+                        internal::get_logger()->warn(
+                            "Failed to parse table_id as uint64_t for table '{}': {}",
+                            table.name, e.what()
+                        );
                     }
                 } else if (j["table_id"].is_number()) {
                     table.table_id = j["table_id"].get<uint64_t>();
@@ -422,8 +586,27 @@ namespace databricks {
             }
 
             return table;
+
+        } catch (const json::parse_error& e) {
+            std::string error = "Malformed JSON for Table: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
+        } catch (const json::type_error& e) {
+            std::string error = "Type error in Table JSON: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
         } catch (const json::exception& e) {
-            throw std::runtime_error("Failed to parse Table JSON: " + std::string(e.what()));
+            std::string error = "Failed to parse Table JSON: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
         }
     }
 
@@ -439,13 +622,29 @@ namespace databricks {
             }
 
             for (const auto& table_json : j["tables"]) {
-                tables.push_back(parse_table(table_json.dump()));
+                try {
+                    tables.push_back(parse_table(table_json.dump()));
+                } catch (const std::exception& e) {
+                    internal::get_logger()->error("Failed to parse individual table: {}", e.what());
+                    // Continue parsing other tables
+                }
             }
 
-            internal::get_logger()->info("Parsed " + std::to_string(tables.size()) + " tables");
+            internal::get_logger()->info("Parsed {} tables", tables.size());
+
+        } catch (const json::parse_error& e) {
+            std::string error = "Malformed JSON in tables list: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
+
         } catch (const json::exception& e) {
-            internal::get_logger()->error("Failed to parse tables list: " + std::string(e.what()));
-            throw std::runtime_error("Failed to parse tables list: " + std::string(e.what()));
+            std::string error = "Failed to parse tables list: " + std::string(e.what());
+            error += "\nJSON (first 200 chars): " +
+                     json_str.substr(0, std::min(size_t(200), json_str.length()));
+            internal::get_logger()->error(error);
+            throw std::runtime_error(error);
         }
 
         return tables;
