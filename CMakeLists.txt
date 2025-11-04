@@ -88,15 +88,13 @@ else()
         PATHS
             /usr/include
             /usr/local/include
-        PATH_SUFFIXES odbc
-        NO_DEFAULT_PATH)
+        PATH_SUFFIXES odbc)
 
     find_library(ODBC_LIBRARY
         NAMES odbc unixodbc
         PATHS
             /usr/lib
-            /usr/local/lib
-        NO_DEFAULT_PATH)
+            /usr/local/lib)
 
     if(ODBC_LIBRARY)
         set(ODBC_LIBRARIES ${ODBC_LIBRARY})
