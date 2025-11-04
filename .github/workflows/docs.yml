@@ -22,10 +22,16 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Install Doxygen
+    - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y doxygen graphviz
+        sudo apt-get install -y doxygen graphviz cmake
+
+    - name: Generate Doxyfile from Template
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
 
     - name: Generate Documentation
       run: doxygen Doxyfile
