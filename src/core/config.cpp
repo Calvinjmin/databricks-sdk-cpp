@@ -1,8 +1,10 @@
 #include "databricks/core/config.h"
+#include "../internal/logger.h"
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
 #include <stdexcept>
+#include <vector>
 
 namespace databricks
 {
@@ -100,25 +102,50 @@ namespace databricks
 
     AuthConfig AuthConfig::from_environment(const std::string& profile)
     {
+        std::vector<std::string> errors; // Track all failures for comprehensive error message
+
         // Try profile first
         try {
             return from_profile(profile);
-        } catch (...) {
-            // Profile failed, try environment variables
+        } catch (const std::runtime_error& e) {
+            std::string error_msg = std::string("Profile loading failed: ") + e.what();
+            internal::get_logger()->debug(error_msg);
+            errors.push_back(error_msg);
+            // Continue to fallback
+        } catch (const std::exception& e) {
+            std::string error_msg = std::string("Unexpected error loading profile: ") + e.what();
+            internal::get_logger()->warn(error_msg);
+            errors.push_back(error_msg);
+            // Continue to fallback
         }
 
         // Try environment variables
         try {
             return from_env();
-        } catch (...) {
-            // Both failed
+        } catch (const std::runtime_error& e) {
+            std::string error_msg = std::string("Environment variable loading failed: ") + e.what();
+            internal::get_logger()->debug(error_msg);
+            errors.push_back(error_msg);
+        } catch (const std::exception& e) {
+            std::string error_msg = std::string("Unexpected error loading environment: ") + e.what();
+            internal::get_logger()->warn(error_msg);
+            errors.push_back(error_msg);
         }
 
-        throw std::runtime_error(
-            "Failed to load Databricks authentication configuration. Ensure either:\n"
+        // Both failed - provide comprehensive error message
+        std::string combined_error =
+            "Failed to load Databricks authentication configuration. "
+            "Ensure either:\n"
             "  1. ~/.databrickscfg has a [" + profile + "] section with host and token, OR\n"
-            "  2. Environment variables are set: DATABRICKS_HOST and DATABRICKS_TOKEN"
-        );
+            "  2. Environment variables are set: DATABRICKS_HOST and DATABRICKS_TOKEN\n\n"
+            "Detailed errors:\n";
+
+        for (size_t i = 0; i < errors.size(); ++i) {
+            combined_error += "  " + std::to_string(i + 1) + ". " + errors[i] + "\n";
+        }
+
+        internal::get_logger()->error(combined_error);
+        throw std::runtime_error(combined_error);
     }
 
     bool AuthConfig::is_valid() const

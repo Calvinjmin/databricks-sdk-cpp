@@ -6,7 +6,7 @@
 
 A C++ SDK for Databricks, providing an interface for interacting with Databricks services.
 
-**Latest Release**: [v0.2.3](https://github.com/calvinjmin/databricks-sdk-cpp/releases/tag/v0.2.3)
+**Latest Release**: [v0.2.4](https://github.com/calvinjmin/databricks-sdk-cpp/releases/tag/v0.2.4)
 
 **Author**: Calvin Min (calvinjmin@gmail.com)
 

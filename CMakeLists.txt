@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 project(databricks_sdk
-    VERSION 0.2.3
+    VERSION 0.2.4
     DESCRIPTION "Databricks C++ SDK"
     LANGUAGES CXX)
 
@@ -8,6 +8,35 @@ project(databricks_sdk
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# ========================================================================
+# Generate version-dependent files from templates
+# This ensures ALL version references stay in sync with CMakeLists.txt
+# ========================================================================
+
+# Generate version.h
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/databricks/version.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/include/databricks/version.h"
+    @ONLY
+)
+
+# Generate Doxyfile
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile"
+    @ONLY
+)
+
+# Generate vcpkg.json
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json"
+    @ONLY
+)
+
+message(STATUS "Databricks C++ SDK Version: ${PROJECT_VERSION}")
+message(STATUS "  Generated: version.h, Doxyfile, vcpkg.json")
 
 # Options
 option(BUILD_EXAMPLES "Build example applications" ON)
@@ -108,7 +137,8 @@ set(HEADERS
     include/databricks/core/client.h
     include/databricks/core/config.h
     include/databricks/connection_pool.h
-    include/databricks/version.h
+    # version.h is auto-generated in build directory
+    ${CMAKE_CURRENT_BINARY_DIR}/include/databricks/version.h
     include/databricks/jobs/jobs.h
     include/databricks/compute/compute.h
     include/databricks/compute/compute_types.h
@@ -129,7 +159,10 @@ add_library(databricks_sdk ${SOURCES} ${HEADERS})
 # Set include directories
 target_include_directories(databricks_sdk
     PUBLIC
+        # Source includes (for headers like client.h, config.h)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        # Build includes (for generated version.h)
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${ODBC_INCLUDE_DIRS}
