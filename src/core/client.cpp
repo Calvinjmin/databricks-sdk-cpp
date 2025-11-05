@@ -38,7 +38,6 @@ namespace databricks
         SQLHENV henv; // Environment handle
         SQLHDBC hdbc; // Connection handle
         bool connected;
-        std::string cached_connection_string; // Pre-built connection string
         std::mutex connection_mutex; // Thread safety for connection operations
         std::future<void> async_connect_future; // Track async connection
         std::shared_ptr<ConnectionPool> pool; // Shared pool (if pooling enabled)
@@ -106,9 +105,6 @@ namespace databricks
             SQLSetConnectAttr(hdbc, SQL_ATTR_LOGIN_TIMEOUT, (SQLPOINTER)10, 0);
             SQLSetConnectAttr(hdbc, SQL_ATTR_CONNECTION_TIMEOUT, (SQLPOINTER)30, 0);
 
-            // Pre-build connection string
-            cached_connection_string = build_connection_string();
-
             if (auto_connect)
             {
                 connect();
@@ -145,6 +141,14 @@ namespace databricks
                 host = host.substr(7);
             }
 
+            // Use secure token if available, fallback to regular token for backward compatibility
+            std::string token_str;
+            if (auth.has_secure_token()) {
+                token_str = internal::from_secure_string(auth.get_secure_token());
+            } else {
+                token_str = auth.token;
+            }
+
             // Build connection string
             std::ostringstream connStr;
             connStr << "Driver=" << sql.odbc_driver_name << ";"
@@ -153,11 +157,61 @@ namespace databricks
                     << "HTTPPath=" << sql.http_path << ";"
                     << "AuthMech=3;"
                     << "UID=token;"
-                    << "PWD=" << auth.token << ";"
+                    << "PWD=" << token_str << ";"
                     << "SSL=1;"
                     << "ThriftTransport=2;";
 
+            // Securely zero the token string
+            internal::secure_zero_string(token_str);
+
             return connStr.str();
+        }
+
+        void secure_zero_string(std::string& str)
+        {
+            internal::secure_zero_string(str);
+        }
+
+        std::string sanitize_error_message(const std::string& error)
+        {
+            // Redact token from error messages to prevent exposure in logs
+            std::string sanitized = error;
+
+            // Get the token to redact (use secure token if available)
+            std::string token_to_redact;
+            if (auth.has_secure_token()) {
+                token_to_redact = internal::from_secure_string(auth.get_secure_token());
+            } else if (!auth.token.empty()) {
+                token_to_redact = auth.token;
+            }
+
+            // Replace token with [REDACTED] if found
+            if (!token_to_redact.empty()) {
+                size_t pos = 0;
+                while ((pos = sanitized.find(token_to_redact, pos)) != std::string::npos) {
+                    sanitized.replace(pos, token_to_redact.length(), "[REDACTED]");
+                    pos += 10; // Length of "[REDACTED]"
+                }
+
+                // Securely zero the token copy
+                internal::secure_zero_string(token_to_redact);
+            }
+
+            // Also redact common token patterns (PWD=..., token=..., etc.)
+            // Match PWD=<value>; or PWD=<value> at end of string
+            size_t pwd_pos = sanitized.find("PWD=");
+            if (pwd_pos != std::string::npos) {
+                size_t start = pwd_pos + 4;
+                size_t end = sanitized.find(';', start);
+                if (end == std::string::npos) {
+                    end = sanitized.length();
+                }
+                if (end > start) {
+                    sanitized.replace(start, end - start, "[REDACTED]");
+                }
+            }
+
+            return sanitized;
         }
 
         bool validate_driver_exists()
@@ -209,21 +263,33 @@ namespace databricks
             SQLCHAR outConnStr[1024];
             SQLSMALLINT outConnStrLen;
 
+            // Build connection string on-demand (not cached)
+            std::string conn_str = build_connection_string();
+
             SQLRETURN ret = SQLDriverConnect(
                 hdbc,
                 NULL,
-                (SQLCHAR *)cached_connection_string.c_str(),
+                (SQLCHAR *)conn_str.c_str(),
                 SQL_NTS,
                 outConnStr,
                 sizeof(outConnStr),
                 &outConnStrLen,
                 SQL_DRIVER_NOPROMPT);
 
+            // Securely zero connection string immediately after use
+            internal::secure_zero_string(conn_str);
+
+            // Also clear outConnStr buffer (may contain connection details including token)
+            volatile unsigned char* p = reinterpret_cast<volatile unsigned char*>(outConnStr);
+            for (size_t i = 0; i < sizeof(outConnStr); ++i) {
+                p[i] = 0;
+            }
+
             if (!SQL_SUCCEEDED(ret))
             {
                 std::string error = get_odbc_error(SQL_HANDLE_DBC, hdbc);
-                internal::get_logger()->error("Connection failed: {}", error);
-                throw std::runtime_error("Failed to connect to Databricks: " + error);
+                internal::get_logger()->error("Connection failed: {}", sanitize_error_message(error));
+                throw std::runtime_error("Failed to connect to Databricks: " + sanitize_error_message(error));
             }
 
             connected = true;
@@ -419,15 +485,17 @@ namespace databricks
                     {
                         if (attempt >= retry.max_attempts)
                         {
+                            std::string sanitized_error = sanitize_error_message(error_msg);
                             internal::get_logger()->error("{} failed after {} attempts: {}",
-                                                          operation_name, retry.max_attempts, error_msg);
+                                                          operation_name, retry.max_attempts, sanitized_error);
                             throw std::runtime_error(
                                 "Operation '" + operation_name + "' failed after " +
-                                std::to_string(attempt) + " attempts: " + error_msg
+                                std::to_string(attempt) + " attempts: " + sanitized_error
                             );
                         }
+                        std::string sanitized_error = sanitize_error_message(error_msg);
                         internal::get_logger()->error("{} failed with non-retryable error: {}",
-                                                      operation_name, error_msg);
+                                                      operation_name, sanitized_error);
                         throw; // Re-throw non-retryable errors immediately
                     }
 

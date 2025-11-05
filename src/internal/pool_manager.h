@@ -2,6 +2,7 @@
 
 #include "databricks/core/config.h"
 #include "databricks/connection_pool.h"
+#include "databricks/internal/secure_string.h"
 #include <memory>
 #include <unordered_map>
 #include <mutex>
@@ -20,7 +21,7 @@ namespace databricks
         struct PoolKey
         {
             std::string host;
-            std::string token;
+            SecureString token;  // Changed to SecureString for security
             std::string http_path;
             int timeout_seconds;
             std::string odbc_driver_name;

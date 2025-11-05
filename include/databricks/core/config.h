@@ -2,6 +2,7 @@
 
 #include <string>
 #include <cstddef>
+#include "databricks/internal/secure_string.h"
 
 namespace databricks
 {
@@ -15,8 +16,45 @@ namespace databricks
     struct AuthConfig
     {
         std::string host;         ///< Databricks workspace URL (e.g., "https://your-workspace.cloud.databricks.com")
-        std::string token;        ///< Authentication token (personal access token or OAuth token)
+        std::string token;        ///< Authentication token (personal access token or OAuth token) - Note: For internal compatibility only. Token is stored securely internally.
         int timeout_seconds = 60; ///< Request timeout in seconds (default: 60)
+
+    private:
+        internal::SecureString secure_token_; ///< Secure storage for authentication token
+
+    public:
+        /**
+         * @brief Set the authentication token securely
+         *
+         * Stores the token in secure memory that is locked and zeroed on destruction.
+         * Also updates the public token field for backward compatibility.
+         *
+         * @param t The authentication token to set
+         */
+        void set_token(const std::string& t) {
+            token = t;
+            secure_token_ = internal::to_secure_string(t);
+        }
+
+        /**
+         * @brief Get the securely stored token
+         *
+         * Returns a reference to the secure token storage.
+         *
+         * @return const reference to SecureString containing the token
+         */
+        const internal::SecureString& get_secure_token() const {
+            return secure_token_;
+        }
+
+        /**
+         * @brief Check if a secure token has been set
+         *
+         * @return true if a secure token is available, false otherwise
+         */
+        bool has_secure_token() const {
+            return !secure_token_.empty();
+        }
 
         /**
          * @brief Load authentication configuration from Databricks CLI profile
