@@ -11,7 +11,8 @@ namespace databricks
         {
             std::hash<std::string> hasher;
             size_t h = hasher(host);
-            h ^= hasher(token) << 1;
+            // SecureString can be hashed as std::string since it uses the same char_traits
+            h ^= std::hash<SecureString>()(token) << 1;
             h ^= hasher(http_path) << 2;
             h ^= std::hash<int>()(timeout_seconds) << 3;
             h ^= hasher(odbc_driver_name) << 4;
@@ -42,10 +43,13 @@ namespace databricks
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
-            // Create pool key from configuration
+            // Create pool key from configuration using secure token
+            SecureString secure_token;
+            secure_token = auth.get_secure_token();
+
             PoolKey key{
                 auth.host,
-                auth.token,
+                secure_token,
                 sql.http_path,
                 auth.timeout_seconds,
                 sql.odbc_driver_name

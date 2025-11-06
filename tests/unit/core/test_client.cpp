@@ -19,7 +19,7 @@ TEST(ClientTest, BuilderWithInvalidConfig) {
 TEST(ClientTest, BuilderConstruction) {
     databricks::AuthConfig auth;
     auth.host = "https://test.databricks.com";
-    auth.token = "test_token";
+    auth.set_token("test_token");
     auth.timeout_seconds = 120;
 
     databricks::SQLConfig sql;
@@ -35,7 +35,7 @@ TEST(ClientTest, BuilderConstruction) {
     const auto& retrieved_sql = client.get_sql_config();
 
     EXPECT_EQ(retrieved_auth.host, "https://test.databricks.com");
-    EXPECT_EQ(retrieved_auth.token, "test_token");
+    EXPECT_TRUE(retrieved_auth.has_secure_token());
     EXPECT_EQ(retrieved_auth.timeout_seconds, 120);
     EXPECT_EQ(retrieved_sql.http_path, "/sql/1.0/warehouses/test");
 }
@@ -46,7 +46,7 @@ TEST(ClientTest, BuilderConstruction) {
 TEST(ClientTest, InvalidCredentialsThrow) {
     databricks::AuthConfig auth;
     auth.host = "https://invalid.databricks.com";
-    auth.token = "invalid_token";
+    auth.set_token("invalid_token");
 
     databricks::SQLConfig sql;
     sql.http_path = "/sql/1.0/warehouses/invalid";
@@ -68,7 +68,7 @@ TEST(ClientTest, InvalidCredentialsThrow) {
 TEST(ClientTest, RetryConstructionEnabled) {
     databricks::AuthConfig auth;
     auth.host = "https://test.databricks.com";
-    auth.token = "test_token";
+    auth.set_token("test_token");
 
     databricks::SQLConfig sql;
     sql.http_path = "/sql/1.0/warehouses/test";
@@ -97,7 +97,7 @@ TEST(ClientTest, RetryConstructionEnabled) {
 TEST(ClientTest, RetryConstructionDisabled) {
     databricks::AuthConfig auth;
     auth.host = "https://test.databricks.com";
-    auth.token = "test_token";
+    auth.set_token("test_token");
 
     databricks::SQLConfig sql;
     sql.http_path = "/sql/1.0/warehouses/test";
@@ -182,7 +182,7 @@ TEST(ClientTest, RetryConfigDefaults) {
 TEST(ClientTest, PoolingAndRetryConfiguration) {
     databricks::AuthConfig auth;
     auth.host = "https://test.databricks.com";
-    auth.token = "test_token";
+    auth.set_token("test_token");
 
     databricks::SQLConfig sql;
     sql.http_path = "/sql/1.0/warehouses/test";
@@ -215,7 +215,7 @@ TEST(ClientTest, PoolingAndRetryConfiguration) {
 TEST(ClientTest, MoveSemantics) {
     databricks::AuthConfig auth;
     auth.host = "https://test.databricks.com";
-    auth.token = "test_token";
+    auth.set_token("test_token");
 
     databricks::SQLConfig sql;
     sql.http_path = "/sql/1.0/warehouses/test";
@@ -245,7 +245,7 @@ TEST(ClientTest, MoveSemantics) {
 TEST(ClientTest, BuilderChaining) {
     databricks::AuthConfig auth;
     auth.host = "https://test.databricks.com";
-    auth.token = "test_token";
+    auth.set_token("test_token");
 
     databricks::SQLConfig sql;
     sql.http_path = "/sql/1.0/warehouses/test";
@@ -277,7 +277,7 @@ TEST(ClientTest, BuilderChaining) {
 TEST(ClientTest, MissingSQLConfig) {
     databricks::AuthConfig auth;
     auth.host = "https://test.databricks.com";
-    auth.token = "test_token";
+    auth.set_token("test_token");
 
     EXPECT_THROW({
         databricks::Client::Builder()

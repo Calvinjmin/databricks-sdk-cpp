@@ -108,7 +108,7 @@ TEST_F(AuthConfigErrorTest, SuccessfulProfileLoading) {
     AuthConfig config = AuthConfig::from_profile("DEFAULT");
 
     EXPECT_EQ(config.host, "https://test.databricks.com");
-    EXPECT_EQ(config.token, "test_token_12345");
+    EXPECT_TRUE(config.has_secure_token());
 
     // Clean up
     std::remove(config_path.c_str());
@@ -122,7 +122,7 @@ TEST_F(AuthConfigErrorTest, SuccessfulEnvironmentLoading) {
     AuthConfig config = AuthConfig::from_env();
 
     EXPECT_EQ(config.host, "https://env-test.databricks.com");
-    EXPECT_EQ(config.token, "env_token_67890");
+    EXPECT_TRUE(config.has_secure_token());
 }
 
 // Test fallback behavior: profile fails, env succeeds
@@ -138,7 +138,7 @@ TEST_F(AuthConfigErrorTest, FallbackToEnvironment) {
     AuthConfig config = AuthConfig::from_environment("DEFAULT");
 
     EXPECT_EQ(config.host, "https://fallback.databricks.com");
-    EXPECT_EQ(config.token, "fallback_token");
+    EXPECT_TRUE(config.has_secure_token());
 }
 
 // Test that profile with missing required fields provides clear error

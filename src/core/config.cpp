@@ -59,7 +59,7 @@ namespace databricks
                 config.host = value;
                 found_host = true;
             } else if (key == "token") {
-                config.token = value;
+                config.set_token(value);
                 found_token = true;
             }
         }
@@ -89,7 +89,7 @@ namespace databricks
         if (!token_env) {
             throw std::runtime_error("DATABRICKS_TOKEN or DATABRICKS_ACCESS_TOKEN environment variable not set");
         }
-        config.token = token_env;
+        config.set_token(token_env);
 
         // Load optional timeout
         const char* timeout_env = std::getenv("DATABRICKS_TIMEOUT");
@@ -150,7 +150,7 @@ namespace databricks
 
     bool AuthConfig::is_valid() const
     {
-        return !host.empty() && !token.empty() && timeout_seconds > 0;
+        return !host.empty() && has_secure_token() && timeout_seconds > 0;
     }
 
     // ========== SQLConfig Implementation ==========

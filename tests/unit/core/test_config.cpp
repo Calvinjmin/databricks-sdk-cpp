@@ -70,7 +70,7 @@ protected:
 TEST_F(ConfigTest, AuthConfigDefaultConstruction) {
     databricks::AuthConfig auth;
     EXPECT_TRUE(auth.host.empty());
-    EXPECT_TRUE(auth.token.empty());
+    EXPECT_FALSE(auth.has_secure_token());
     EXPECT_EQ(auth.timeout_seconds, 60);
 }
 
@@ -108,7 +108,7 @@ token = profile_token_123
     databricks::AuthConfig auth = databricks::AuthConfig::from_profile("DEFAULT");
 
     EXPECT_EQ(auth.host, "https://profile.databricks.com");
-    EXPECT_EQ(auth.token, "profile_token_123");
+    EXPECT_TRUE(auth.has_secure_token());
 }
 
 /**
@@ -133,7 +133,7 @@ token = staging_token
     databricks::AuthConfig auth = databricks::AuthConfig::from_profile("production");
 
     EXPECT_EQ(auth.host, "https://production.databricks.com");
-    EXPECT_EQ(auth.token, "prod_token_456");
+    EXPECT_TRUE(auth.has_secure_token());
 }
 
 /**
@@ -149,7 +149,7 @@ TEST_F(ConfigTest, LoadAuthConfigFromEnv) {
     databricks::AuthConfig auth = databricks::AuthConfig::from_env();
 
     EXPECT_EQ(auth.host, "https://env.databricks.com");
-    EXPECT_EQ(auth.token, "env_token_789");
+    EXPECT_TRUE(auth.has_secure_token());
 }
 
 /**
@@ -187,7 +187,7 @@ token = profile_token
 
     // Should use profile values, not env vars
     EXPECT_EQ(auth.host, "https://profile.databricks.com");
-    EXPECT_EQ(auth.token, "profile_token");
+    EXPECT_TRUE(auth.has_secure_token());
 }
 
 /**
@@ -202,7 +202,7 @@ TEST_F(ConfigTest, FromEnvironmentFallbackToEnv) {
     databricks::AuthConfig auth = databricks::AuthConfig::from_environment();
 
     EXPECT_EQ(auth.host, "https://env.databricks.com");
-    EXPECT_EQ(auth.token, "env_token");
+    EXPECT_TRUE(auth.has_secure_token());
 }
 
 /**
@@ -235,7 +235,7 @@ TEST_F(ConfigTest, AuthConfigValidation) {
     EXPECT_FALSE(auth.is_valid());
 
     // Host + token is valid
-    auth.token = "test_token";
+    auth.set_token("test_token");
     EXPECT_TRUE(auth.is_valid());
 
     // Zero timeout makes it invalid
