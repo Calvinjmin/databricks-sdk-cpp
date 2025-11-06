@@ -143,11 +143,7 @@ namespace databricks
 
             // Use secure token if available, fallback to regular token for backward compatibility
             std::string token_str;
-            if (auth.has_secure_token()) {
-                token_str = internal::from_secure_string(auth.get_secure_token());
-            } else {
-                token_str = auth.token;
-            }
+            token_str = internal::from_secure_string(auth.get_secure_token());
 
             // Build connection string
             std::ostringstream connStr;
@@ -179,11 +175,7 @@ namespace databricks
 
             // Get the token to redact (use secure token if available)
             std::string token_to_redact;
-            if (auth.has_secure_token()) {
-                token_to_redact = internal::from_secure_string(auth.get_secure_token());
-            } else if (!auth.token.empty()) {
-                token_to_redact = auth.token;
-            }
+            token_to_redact = internal::from_secure_string( auth.get_secure_token() );
 
             // Replace token with [REDACTED] if found
             if (!token_to_redact.empty()) {

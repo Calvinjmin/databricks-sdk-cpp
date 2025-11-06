@@ -46,11 +46,7 @@ namespace databricks
             // Create pool key from configuration
             // Use secure token if available, fallback to regular token for compatibility
             SecureString secure_token;
-            if (auth.has_secure_token()) {
-                secure_token = auth.get_secure_token();
-            } else {
-                secure_token = to_secure_string(auth.token);
-            }
+            secure_token = auth.get_secure_token();
 
             PoolKey key{
                 auth.host,

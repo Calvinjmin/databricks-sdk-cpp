@@ -16,7 +16,6 @@ namespace databricks
     struct AuthConfig
     {
         std::string host;         ///< Databricks workspace URL (e.g., "https://your-workspace.cloud.databricks.com")
-        std::string token;        ///< Authentication token (personal access token or OAuth token) - Note: For internal compatibility only. Token is stored securely internally.
         int timeout_seconds = 60; ///< Request timeout in seconds (default: 60)
 
     private:
@@ -32,7 +31,6 @@ namespace databricks
          * @param t The authentication token to set
          */
         void set_token(const std::string& t) {
-            token = t;
             secure_token_ = internal::to_secure_string(t);
         }
 
