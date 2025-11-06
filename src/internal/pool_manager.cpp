@@ -43,8 +43,7 @@ namespace databricks
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
-            // Create pool key from configuration
-            // Use secure token if available, fallback to regular token for compatibility
+            // Create pool key from configuration using secure token
             SecureString secure_token;
             secure_token = auth.get_secure_token();
 

@@ -150,7 +150,7 @@ namespace databricks
 
     bool AuthConfig::is_valid() const
     {
-        return !host.empty() && (!token.empty() || has_secure_token()) && timeout_seconds > 0;
+        return !host.empty() && has_secure_token() && timeout_seconds > 0;
     }
 
     // ========== SQLConfig Implementation ==========

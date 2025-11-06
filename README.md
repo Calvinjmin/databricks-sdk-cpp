@@ -280,7 +280,7 @@ int main() {
     // Configure authentication
     databricks::AuthConfig auth;
     auth.host = "https://my-workspace.databricks.com";
-    auth.token = "dapi1234567890abcdef";
+    auth.set_token("dapi1234567890abcdef");
     auth.timeout_seconds = 60;
 
     // Configure SQL settings
@@ -643,7 +643,7 @@ For advanced users who need fine-grained control over connection pools:
 // Build config for pool
 databricks::AuthConfig auth;
 auth.host = "https://my-workspace.databricks.com";
-auth.token = "dapi1234567890abcdef";
+auth.set_token("dapi1234567890abcdef");
 
 databricks::SQLConfig sql;
 sql.http_path = "/sql/1.0/warehouses/abc123";

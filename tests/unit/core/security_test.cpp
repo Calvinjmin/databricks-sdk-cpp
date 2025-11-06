@@ -223,16 +223,16 @@ TEST_F(SecurityTest, SecureStringCopyAndMove) {
 }
 
 /**
- * @brief Test backward compatibility: using token field directly still works
+ * @brief Test secure token usage with set_token
  */
-TEST_F(SecurityTest, BackwardCompatibilityTokenField) {
+TEST_F(SecurityTest, SecureTokenUsage) {
     AuthConfig config;
     config.host = "https://example.cloud.databricks.com";
-    config.token = "direct_token";
+    config.set_token("secure_token");
 
-    // Should be valid with just token field set (no secure_token)
+    // Should be valid with secure_token set
     EXPECT_TRUE(config.is_valid());
-    EXPECT_EQ(config.token, "direct_token");
+    EXPECT_TRUE(config.has_secure_token());
 }
 
 } // namespace test

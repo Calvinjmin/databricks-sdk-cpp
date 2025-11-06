@@ -16,7 +16,7 @@ class ConnectionPoolTest : public ::testing::Test {
 protected:
     void SetUp() override {
         auth.host = "https://test.databricks.com";
-        auth.token = "test_token_pool";
+        auth.set_token("test_token_pool");
         auth.timeout_seconds = 60;
 
         sql.http_path = "/sql/1.0/warehouses/test";

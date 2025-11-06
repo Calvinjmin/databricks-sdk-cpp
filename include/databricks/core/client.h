@@ -37,7 +37,7 @@ namespace databricks
      * // Advanced usage with explicit configuration
      * databricks::AuthConfig auth;
      * auth.host = "https://your-workspace.cloud.databricks.com";
-     * auth.token = "your_token";
+     * auth.set_token("your_token");
      *
      * databricks::SQLConfig sql;
      * sql.http_path = "/sql/1.0/warehouses/abc123";

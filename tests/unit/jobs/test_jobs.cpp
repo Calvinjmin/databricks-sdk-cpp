@@ -9,7 +9,7 @@ protected:
 
     void SetUp() override {
         auth.host = "https://test.databricks.com";
-        auth.token = "test_token";
+        auth.set_token("test_token");
         auth.timeout_seconds = 30;
     }
 };
@@ -213,7 +213,7 @@ TEST(JobRunStructTest, RejectsInvalidJson) {
 TEST_F(JobsTest, MinimalConfigConstruction) {
     databricks::AuthConfig minimal_auth;
     minimal_auth.host = "https://minimal.databricks.com";
-    minimal_auth.token = "token";
+    minimal_auth.set_token("token");
 
     ASSERT_NO_THROW({
         databricks::Jobs jobs(minimal_auth);
@@ -224,11 +224,11 @@ TEST_F(JobsTest, MinimalConfigConstruction) {
 TEST_F(JobsTest, MultipleClientsCanCoexist) {
     databricks::AuthConfig auth1;
     auth1.host = "https://workspace1.databricks.com";
-    auth1.token = "token1";
+    auth1.set_token("token1");
 
     databricks::AuthConfig auth2;
     auth2.host = "https://workspace2.databricks.com";
-    auth2.token = "token2";
+    auth2.set_token("token2");
 
     ASSERT_NO_THROW({
         databricks::Jobs jobs1(auth1);

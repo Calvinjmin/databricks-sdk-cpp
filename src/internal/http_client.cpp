@@ -56,8 +56,12 @@ namespace databricks {
         }
 
         std::map<std::string, std::string> HttpClient::get_headers() const {
+            // Convert secure token to string for HTTP header
+            // Note: HTTP headers require std::string, so token will be in plain memory during request
+            std::string token_str = from_secure_string(auth_.get_secure_token());
+
             return {
-                {"Authorization", "Bearer " + auth_.token},
+                {"Authorization", "Bearer " + token_str},
                 {"Content-Type", "application/json"},
                 {"Accept", "application/json"}
             };
