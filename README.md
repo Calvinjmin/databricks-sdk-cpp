@@ -6,7 +6,7 @@
 
 A modern C++ SDK for Databricks with SQL, Jobs, and Compute APIs.
 
-**Latest Release**: [v0.2.4](https://github.com/calvinjmin/databricks-sdk-cpp/releases/tag/v0.2.4) | **Documentation**: [calvinjmin.github.io/databricks-sdk-cpp](https://calvinjmin.github.io/databricks-sdk-cpp/)
+**Latest Release**: [v0.3.0](https://github.com/calvinjmin/databricks-sdk-cpp/releases/tag/v0.3.0) | **Documentation**: [calvinjmin.github.io/databricks-sdk-cpp](https://calvinjmin.github.io/databricks-sdk-cpp/)
 
 ---
 
