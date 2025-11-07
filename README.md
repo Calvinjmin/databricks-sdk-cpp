@@ -1,12 +1,13 @@
 # Databricks C++ SDK
 
-![Landing Image](./assets/images/landing.png)
+![](assets/images/landing.png)
 
 [![Latest Release](https://img.shields.io/github/v/release/calvinjmin/databricks-sdk-cpp?display_name=tag&sort=semver)](https://github.com/calvinjmin/databricks-sdk-cpp/releases/latest)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/calvinjmin/databricks-sdk-cpp/docs.yml?branch=main)](https://github.com/calvinjmin/databricks-sdk-cpp/actions)
-[![Documentation](https://img.shields.io/badge/docs-online-blue.svg)](https://calvinjmin.github.io/databricks-sdk-cpp/)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Open Source Repo: [github.com/Calvinjmin/databricks-sdk-cpp](https://github.com/Calvinjmin/databricks-sdk-cpp)
 
 ---
 

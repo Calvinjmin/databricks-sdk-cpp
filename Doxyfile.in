@@ -22,6 +22,8 @@ GENERATE_LATEX         = NO
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
 HTML_EXTRA_FILES       = docs/html/.nojekyll
+HTML_EXTRA_STYLESHEET  = docs/styles/custom.css
+IMAGE_PATH             = assets
 
 # Documentation extraction
 EXTRACT_ALL            = YES
