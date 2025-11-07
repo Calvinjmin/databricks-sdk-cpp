@@ -1,8 +1,10 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
 #include "databricks/core/config.h"
+
 #include <cstdlib>
 #include <fstream>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 using namespace databricks;
 using ::testing::HasSubstr;

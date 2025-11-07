@@ -6,9 +6,9 @@
 #include <string>
 
 #ifdef _WIN32
-#include <windows.h>
+#    include <windows.h>
 #else
-#include <sys/mman.h>
+#    include <sys/mman.h>
 #endif
 
 namespace databricks {
@@ -24,8 +24,7 @@ namespace internal {
  *
  * @tparam T The type of object to allocate
  */
-template <typename T>
-class SecureAllocator {
+template <typename T> class SecureAllocator {
 public:
     using value_type = T;
     using size_type = std::size_t;
@@ -33,11 +32,9 @@ public:
 
     SecureAllocator() noexcept = default;
 
-    template <typename U>
-    SecureAllocator(const SecureAllocator<U>&) noexcept {}
+    template <typename U> SecureAllocator(const SecureAllocator<U>&) noexcept {}
 
-    template <typename U>
-    struct rebind {
+    template <typename U> struct rebind {
         using other = SecureAllocator<U>;
     };
 
@@ -124,13 +121,11 @@ private:
     }
 };
 
-template <typename T, typename U>
-bool operator==(const SecureAllocator<T>&, const SecureAllocator<U>&) noexcept {
+template <typename T, typename U> bool operator==(const SecureAllocator<T>&, const SecureAllocator<U>&) noexcept {
     return true;
 }
 
-template <typename T, typename U>
-bool operator!=(const SecureAllocator<T>&, const SecureAllocator<U>&) noexcept {
+template <typename T, typename U> bool operator!=(const SecureAllocator<T>&, const SecureAllocator<U>&) noexcept {
     return false;
 }
 

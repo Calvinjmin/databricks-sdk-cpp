@@ -1,15 +1,18 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include "databricks/unity_catalog/unity_catalog.h"
 #include "databricks/core/config.h"
+#include "databricks/unity_catalog/unity_catalog.h"
+
 #include "mock_http_client.h"
+
 #include <memory>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 using namespace databricks;
 using namespace databricks::test;
+using ::testing::_;
 using ::testing::HasSubstr;
 using ::testing::Return;
-using ::testing::_;
 
 // =============================================================================
 // Unity Catalog JSON Parsing Error Handling Tests
@@ -37,8 +40,7 @@ TEST_F(UnityCatalogErrorTest, ParseCatalogMalformedJSON) {
     response.status_code = 200;
     response.body = "{ invalid json, missing quote";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test")).WillOnce(Return(response));
 
     try {
         unity_catalog_->get_catalog("test");
@@ -66,8 +68,7 @@ TEST_F(UnityCatalogErrorTest, ParseCatalogMissingRequiredField) {
         "comment": "Test catalog"
     })";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test")).WillOnce(Return(response));
 
     try {
         unity_catalog_->get_catalog("test");
@@ -94,8 +95,7 @@ TEST_F(UnityCatalogErrorTest, ParseCatalogTypeError) {
         "catalog_type": "MANAGED_CATALOG"
     })";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test")).WillOnce(Return(response));
 
     try {
         unity_catalog_->get_catalog("test");
@@ -130,8 +130,7 @@ TEST_F(UnityCatalogErrorTest, ParseCatalogValidJSON) {
         "full_name": "test_catalog"
     })";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test_catalog"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test_catalog")).WillOnce(Return(response));
 
     CatalogInfo catalog = unity_catalog_->get_catalog("test_catalog");
 
@@ -150,8 +149,7 @@ TEST_F(UnityCatalogErrorTest, ParseCatalogListMalformedJSON) {
     response.status_code = 200;
     response.body = "not valid json at all [[[";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs")).WillOnce(Return(response));
 
     try {
         unity_catalog_->list_catalogs();
@@ -187,8 +185,7 @@ TEST_F(UnityCatalogErrorTest, ParseCatalogListPartialFailure) {
         ]
     })";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs")).WillOnce(Return(response));
 
     // Should not throw, but should skip the invalid catalog
     std::vector<CatalogInfo> catalogs = unity_catalog_->list_catalogs();
@@ -205,8 +202,7 @@ TEST_F(UnityCatalogErrorTest, ParseCatalogListEmptyArray) {
     response.status_code = 200;
     response.body = R"({"catalogs": []})";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs")).WillOnce(Return(response));
 
     std::vector<CatalogInfo> catalogs = unity_catalog_->list_catalogs();
     EXPECT_EQ(catalogs.size(), 0);
@@ -218,8 +214,7 @@ TEST_F(UnityCatalogErrorTest, ParseCatalogListNoCatalogsField) {
     response.status_code = 200;
     response.body = R"({"other_field": "value"})";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs")).WillOnce(Return(response));
 
     std::vector<CatalogInfo> catalogs = unity_catalog_->list_catalogs();
     EXPECT_EQ(catalogs.size(), 0);
@@ -237,8 +232,7 @@ TEST_F(UnityCatalogErrorTest, ParseSchemaMissingRequiredField) {
         "owner": "admin"
     })";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/schemas/test_catalog.test_schema"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/schemas/test_catalog.test_schema")).WillOnce(Return(response));
 
     try {
         unity_catalog_->get_schema("test_catalog.test_schema");
@@ -261,8 +255,7 @@ TEST_F(UnityCatalogErrorTest, ParseSchemaValidJSON) {
         "full_name": "test_catalog.test_schema"
     })";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/schemas/test_catalog.test_schema"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/schemas/test_catalog.test_schema")).WillOnce(Return(response));
 
     SchemaInfo schema = unity_catalog_->get_schema("test_catalog.test_schema");
     EXPECT_EQ(schema.name, "test_schema");
@@ -374,12 +367,11 @@ TEST_F(UnityCatalogErrorTest, ParseColumnMalformedJSON) {
         ]
     })";
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/tables/test_table"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/tables/test_table")).WillOnce(Return(response));
 
     // Should handle gracefully - skipping invalid columns
     TableInfo table = unity_catalog_->get_table("test_table");
-    EXPECT_EQ(table.columns.size(), 0);  // Invalid column skipped
+    EXPECT_EQ(table.columns.size(), 0); // Invalid column skipped
 }
 
 // =============================================================================
@@ -398,8 +390,7 @@ TEST_F(UnityCatalogErrorTest, LongJSONTruncatedInError) {
     response.status_code = 200;
     response.body = long_json;
 
-    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test"))
-        .WillOnce(Return(response));
+    EXPECT_CALL(*mock_http_client_, get("/unity-catalog/catalogs/test")).WillOnce(Return(response));
 
     try {
         unity_catalog_->get_catalog("test");

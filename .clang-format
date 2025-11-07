@@ -1,0 +1,92 @@
+---
+# Clang-Format configuration for Databricks C++ SDK
+
+BasedOnStyle: LLVM
+
+# Language
+Language: Cpp
+Standard: c++17
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+NamespaceIndentation: None
+IndentCaseLabels: false
+IndentPPDirectives: AfterHash
+AccessModifierOffset: -4
+
+# Line breaks
+ColumnLimit: 120
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+BreakBeforeBraces: Attach
+
+# Spacing
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceInEmptyParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpacesInAngles: false
+
+# Alignment
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands: true
+AlignTrailingComments: true
+
+# Pointer and reference alignment
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# Include ordering
+IncludeBlocks: Regroup
+SortIncludes: CaseSensitive
+IncludeCategories:
+  # Main header (e.g., foo.cpp includes "databricks/foo.h" first)
+  - Regex:           '^"databricks/'
+    Priority:        1
+  # Other project headers
+  - Regex:           '^".*\.h"'
+    Priority:        2
+  # Internal headers
+  - Regex:           '^"\.\./internal/'
+    Priority:        3
+  # Standard library
+  - Regex:           '^<[a-z_]+>'
+    Priority:        4
+  # Windows headers
+  - Regex:           '^<windows\.h>'
+    Priority:        5
+  # ODBC headers
+  - Regex:           '^<sql'
+    Priority:        6
+  # Third-party libraries
+  - Regex:           '.*'
+    Priority:        7
+
+# Other formatting
+BinPackArguments: true
+BinPackParameters: true
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+FixNamespaceComments: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+ReflowComments: true
+
+# Penalties (control line breaking decisions)
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakComment: 300
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 60

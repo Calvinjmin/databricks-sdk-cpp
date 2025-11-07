@@ -1,5 +1,6 @@
-#include <databricks/core/client.h>
 #include <iostream>
+
+#include <databricks/core/client.h>
 
 /**
  * @brief Simple example demonstrating basic SQL query execution
@@ -13,9 +14,7 @@ int main() {
     try {
         // Create client from environment configuration
         // This automatically loads from ~/.databrickscfg or environment variables
-        auto client = databricks::Client::Builder()
-            .with_environment_config()
-            .build();
+        auto client = databricks::Client::Builder().with_environment_config().build();
 
         std::cout << "Connected to Databricks" << std::endl;
         std::cout << std::endl;
@@ -51,7 +50,6 @@ int main() {
 
         std::cout << "Note: Parameterized queries protect against SQL injection" << std::endl;
         std::cout << "      Always use them when incorporating user input!" << std::endl;
-
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         std::cerr << std::endl;

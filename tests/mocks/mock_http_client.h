@@ -1,7 +1,8 @@
 #pragma once
 
-#include <gmock/gmock.h>
 #include "../../src/internal/http_client_interface.h"
+
+#include <gmock/gmock.h>
 
 namespace databricks {
 namespace test {
@@ -25,7 +26,8 @@ public:
 
     MOCK_METHOD(internal::HttpResponse, get, (const std::string& path), (override));
     MOCK_METHOD(internal::HttpResponse, post, (const std::string& path, const std::string& json_body), (override));
-    MOCK_METHOD(void, check_response, (const internal::HttpResponse& response, const std::string& operation_name), (const, override));
+    MOCK_METHOD(void, check_response, (const internal::HttpResponse& response, const std::string& operation_name),
+                (const, override));
 
     // Helper methods to create common responses
 

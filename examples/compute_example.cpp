@@ -18,10 +18,11 @@
 
 #include "databricks/compute/compute.h"
 #include "databricks/core/config.h"
-#include <iostream>
-#include <exception>
-#include <thread>
+
 #include <chrono>
+#include <exception>
+#include <iostream>
+#include <thread>
 
 // Helper function to print cluster details
 void print_cluster_info(const databricks::Cluster& cluster, const std::string& indent = "  ") {
@@ -53,11 +54,8 @@ void print_cluster_info(const databricks::Cluster& cluster, const std::string& i
 }
 
 // Helper function to wait for cluster state
-bool wait_for_cluster_state(databricks::Compute& compute,
-                            const std::string& cluster_id,
-                            const std::string& target_state,
-                            int max_attempts = 60,
-                            int wait_seconds = 10) {
+bool wait_for_cluster_state(databricks::Compute& compute, const std::string& cluster_id,
+                            const std::string& target_state, int max_attempts = 60, int wait_seconds = 10) {
     std::cout << "\nWaiting for cluster to reach state: " << target_state << std::endl;
 
     for (int i = 0; i < max_attempts; i++) {
@@ -136,9 +134,9 @@ int main() {
         // Create a minimal single-node cluster to minimize costs
         databricks::Cluster cluster_config;
         cluster_config.cluster_name = "sdk-example-cluster";
-        cluster_config.spark_version = "11.3.x-scala2.12";  // Use a stable version
+        cluster_config.spark_version = "11.3.x-scala2.12"; // Use a stable version
         cluster_config.node_type_id = "i3.xlarge";         // AWS instance type (adjust for your cloud)
-        cluster_config.num_workers = 0;                     // Single-node mode (driver only)
+        cluster_config.num_workers = 0;                    // Single-node mode (driver only)
 
         // Add custom tags for tracking
         cluster_config.custom_tags["created_by"] = "databricks-cpp-sdk";
@@ -158,7 +156,7 @@ int main() {
 
             // Find the newly created cluster by name
             std::cout << "\nSearching for newly created cluster..." << std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(5));  // Wait a bit for API to update
+            std::this_thread::sleep_for(std::chrono::seconds(5)); // Wait a bit for API to update
 
             auto updated_clusters = compute.list_compute();
             std::string new_cluster_id;
@@ -272,7 +270,6 @@ int main() {
         std::cout << "  - Running clusters incur costs" << std::endl;
         std::cout << "  - Terminate unused clusters to avoid charges" << std::endl;
         std::cout << "  - Check your Databricks workspace for any running clusters" << std::endl;
-
     } catch (const std::exception& e) {
         std::cerr << "\n========================================" << std::endl;
         std::cerr << "Error: " << e.what() << std::endl;

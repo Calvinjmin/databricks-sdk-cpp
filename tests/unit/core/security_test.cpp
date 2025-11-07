@@ -1,7 +1,9 @@
-#include <gtest/gtest.h>
 #include "databricks/core/config.h"
 #include "databricks/internal/secure_string.h"
+
 #include <cstring>
+
+#include <gtest/gtest.h>
 
 namespace databricks {
 namespace test {

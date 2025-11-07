@@ -1,10 +1,11 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include <databricks/connection_pool.h>
-#include <databricks/core/client.h>
+#include <chrono>
 #include <thread>
 #include <vector>
-#include <chrono>
+
+#include <databricks/connection_pool.h>
+#include <databricks/core/client.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 using ::testing::_;
 using ::testing::Return;
@@ -35,24 +36,15 @@ protected:
  * @brief Test client creation with pooling enabled
  */
 TEST_F(ConnectionPoolTest, ClientCreationWithPooling) {
-    EXPECT_NO_THROW({
-        auto client = databricks::Client::Builder()
-            .with_auth(auth)
-            .with_sql(sql)
-            .with_pooling(pooling)
-            .build();
-    });
+    EXPECT_NO_THROW(
+        { auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_pooling(pooling).build(); });
 }
 
 /**
  * @brief Test client with pooling enabled uses pool
  */
 TEST_F(ConnectionPoolTest, ClientUsesPoolWhenEnabled) {
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_pooling(pooling)
-        .build();
+    auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_pooling(pooling).build();
 
     const auto& pool_config = client.get_pooling_config();
     EXPECT_TRUE(pool_config.enabled);
@@ -64,17 +56,9 @@ TEST_F(ConnectionPoolTest, ClientUsesPoolWhenEnabled) {
  * @brief Test multiple clients with same configuration share pool
  */
 TEST_F(ConnectionPoolTest, MultipleClientsSharingPool) {
-    auto client1 = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_pooling(pooling)
-        .build();
+    auto client1 = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_pooling(pooling).build();
 
-    auto client2 = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_pooling(pooling)
-        .build();
+    auto client2 = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_pooling(pooling).build();
 
     // Both clients should have same configuration
     EXPECT_EQ(client1.get_auth_config().host, client2.get_auth_config().host);
@@ -88,11 +72,7 @@ TEST_F(ConnectionPoolTest, PoolWithMinConnections) {
     pooling.min_connections = 1;
     pooling.max_connections = 3;
 
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_pooling(pooling)
-        .build();
+    auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_pooling(pooling).build();
 
     EXPECT_EQ(client.get_pooling_config().min_connections, 1);
 }
@@ -104,11 +84,7 @@ TEST_F(ConnectionPoolTest, PoolWithMaxConnections) {
     pooling.min_connections = 5;
     pooling.max_connections = 20;
 
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_pooling(pooling)
-        .build();
+    auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_pooling(pooling).build();
 
     EXPECT_EQ(client.get_pooling_config().max_connections, 20);
 }
@@ -117,11 +93,7 @@ TEST_F(ConnectionPoolTest, PoolWithMaxConnections) {
  * @brief Test disconnect on pooled client (no-op)
  */
 TEST_F(ConnectionPoolTest, DisconnectPooledClient) {
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_pooling(pooling)
-        .build();
+    auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_pooling(pooling).build();
 
     // Disconnect should be a no-op for pooled clients
     EXPECT_NO_THROW(client.disconnect());
@@ -156,4 +128,3 @@ TEST_F(ConnectionPoolTest, PoolingConfigValidation) {
     invalid_pooling.max_connections = 5;
     EXPECT_FALSE(invalid_pooling.is_valid());
 }
-
