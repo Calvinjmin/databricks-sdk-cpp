@@ -11,7 +11,6 @@ namespace databricks {
 // ==================== CATALOG TYPE ENUM HELPERS ====================
 
 CatalogTypeEnum parse_catalog_type(const std::string& type_str) {
-    // TODO: Implement catalog type parsing
     if (type_str == "MANAGED_CATALOG") {
         return CatalogTypeEnum::MANAGED_CATALOG;
     } else if (type_str == "EXTERNAL_CATALOG") {
@@ -23,7 +22,6 @@ CatalogTypeEnum parse_catalog_type(const std::string& type_str) {
 }
 
 std::string catalog_type_to_string(CatalogTypeEnum type) {
-    // TODO: Implement catalog type to string conversion
     switch (type) {
     case CatalogTypeEnum::MANAGED_CATALOG:
         return "MANAGED_CATALOG";
@@ -40,7 +38,6 @@ std::string catalog_type_to_string(CatalogTypeEnum type) {
 // ==================== TABLE TYPE ENUM HELPERS ====================
 
 TableTypeEnum parse_table_type(const std::string& type_str) {
-    // TODO: Implement table type parsing
     if (type_str == "MANAGED") {
         return TableTypeEnum::MANAGED;
     } else if (type_str == "EXTERNAL") {
@@ -56,7 +53,6 @@ TableTypeEnum parse_table_type(const std::string& type_str) {
 }
 
 std::string table_type_to_string(TableTypeEnum type) {
-    // TODO: Implement table type to string conversion
     switch (type) {
     case TableTypeEnum::MANAGED:
         return "MANAGED";
