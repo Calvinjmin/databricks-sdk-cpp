@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 /**
  * @file unity_catalog_example.cpp
  * @brief Example demonstrating the Databricks Unity Catalog API
@@ -9,10 +11,11 @@
  * 4. List tables in a schema
  */
 
-#include "databricks/unity_catalog/unity_catalog.h"
 #include "databricks/core/config.h"
-#include <iostream>
+#include "databricks/unity_catalog/unity_catalog.h"
+
 #include <exception>
+#include <iostream>
 
 int main() {
     try {
@@ -34,7 +37,7 @@ int main() {
         auto catalogs = uc.list_catalogs();
         std::cout << "Found " << catalogs.size() << " catalogs:\n" << std::endl;
 
-        for ( int i = 0; i < std::min(static_cast<int>(catalogs.size()), 10); i++ ) {
+        for (int i = 0; i < std::min(static_cast<int>(catalogs.size()), 10); i++) {
             const auto& catalog = catalogs[i];
             std::cout << "  Catalog:     " << catalog.name << std::endl;
             std::cout << "  Owner:       " << catalog.owner << std::endl;
@@ -119,7 +122,6 @@ int main() {
 
         std::cout << "\n======================================" << std::endl;
         std::cout << "Unity Catalog API example completed successfully!" << std::endl;
-
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;

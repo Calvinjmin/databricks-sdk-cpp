@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 /**
  * @file jobs_example.cpp
  * @brief Example demonstrating the Databricks Jobs API
@@ -8,10 +10,11 @@
  * 3. Trigger a job run
  */
 
-#include "databricks/jobs/jobs.h"
 #include "databricks/core/config.h"
-#include <iostream>
+#include "databricks/jobs/jobs.h"
+
 #include <exception>
+#include <iostream>
 
 int main() {
     try {
@@ -60,7 +63,6 @@ int main() {
 
         std::cout << "\n======================================" << std::endl;
         std::cout << "Jobs API example completed successfully!" << std::endl;
-
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;

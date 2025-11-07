@@ -1,9 +1,13 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #pragma once
 
-#include <gmock/gmock.h>
+#include <string>
+
 #include <sql.h>
 #include <sqlext.h>
-#include <string>
+
+#include <gmock/gmock.h>
 
 namespace databricks {
 namespace test {
@@ -18,45 +22,36 @@ class MockODBCInterface {
 public:
     virtual ~MockODBCInterface() = default;
 
-    MOCK_METHOD(SQLRETURN, SQLAllocHandle,
-                (SQLSMALLINT HandleType, SQLHANDLE InputHandle, SQLHANDLE* OutputHandlePtr));
+    MOCK_METHOD(SQLRETURN, SQLAllocHandle, (SQLSMALLINT HandleType, SQLHANDLE InputHandle, SQLHANDLE* OutputHandlePtr));
 
-    MOCK_METHOD(SQLRETURN, SQLFreeHandle,
-                (SQLSMALLINT HandleType, SQLHANDLE Handle));
+    MOCK_METHOD(SQLRETURN, SQLFreeHandle, (SQLSMALLINT HandleType, SQLHANDLE Handle));
 
     MOCK_METHOD(SQLRETURN, SQLSetEnvAttr,
-                (SQLHENV EnvironmentHandle, SQLINTEGER Attribute,
-                 SQLPOINTER ValuePtr, SQLINTEGER StringLength));
+                (SQLHENV EnvironmentHandle, SQLINTEGER Attribute, SQLPOINTER ValuePtr, SQLINTEGER StringLength));
 
     MOCK_METHOD(SQLRETURN, SQLSetConnectAttr,
-                (SQLHDBC ConnectionHandle, SQLINTEGER Attribute,
-                 SQLPOINTER ValuePtr, SQLINTEGER StringLength));
+                (SQLHDBC ConnectionHandle, SQLINTEGER Attribute, SQLPOINTER ValuePtr, SQLINTEGER StringLength));
 
     MOCK_METHOD(SQLRETURN, SQLDriverConnect,
-                (SQLHDBC hdbc, SQLHWND hwnd, SQLCHAR* szConnStrIn,
-                 SQLSMALLINT cchConnStrIn, SQLCHAR* szConnStrOut,
-                 SQLSMALLINT cchConnStrOutMax, SQLSMALLINT* pcchConnStrOut,
-                 SQLUSMALLINT fDriverCompletion));
+                (SQLHDBC hdbc, SQLHWND hwnd, SQLCHAR* szConnStrIn, SQLSMALLINT cchConnStrIn, SQLCHAR* szConnStrOut,
+                 SQLSMALLINT cchConnStrOutMax, SQLSMALLINT* pcchConnStrOut, SQLUSMALLINT fDriverCompletion));
 
     MOCK_METHOD(SQLRETURN, SQLDisconnect, (SQLHDBC ConnectionHandle));
 
-    MOCK_METHOD(SQLRETURN, SQLExecDirect,
-                (SQLHSTMT StatementHandle, SQLCHAR* StatementText, SQLINTEGER TextLength));
+    MOCK_METHOD(SQLRETURN, SQLExecDirect, (SQLHSTMT StatementHandle, SQLCHAR* StatementText, SQLINTEGER TextLength));
 
-    MOCK_METHOD(SQLRETURN, SQLNumResultCols,
-                (SQLHSTMT StatementHandle, SQLSMALLINT* ColumnCountPtr));
+    MOCK_METHOD(SQLRETURN, SQLNumResultCols, (SQLHSTMT StatementHandle, SQLSMALLINT* ColumnCountPtr));
 
     MOCK_METHOD(SQLRETURN, SQLFetch, (SQLHSTMT StatementHandle));
 
     MOCK_METHOD(SQLRETURN, SQLGetData,
-                (SQLHSTMT StatementHandle, SQLUSMALLINT ColumnNumber,
-                 SQLSMALLINT TargetType, SQLPOINTER TargetValuePtr,
+                (SQLHSTMT StatementHandle, SQLUSMALLINT ColumnNumber, SQLSMALLINT TargetType, SQLPOINTER TargetValuePtr,
                  SQLLEN BufferLength, SQLLEN* StrLen_or_IndPtr));
 
     MOCK_METHOD(SQLRETURN, SQLGetDiagRec,
-                (SQLSMALLINT HandleType, SQLHANDLE Handle, SQLSMALLINT RecNumber,
-                 SQLCHAR* SQLState, SQLINTEGER* NativeErrorPtr, SQLCHAR* MessageText,
-                 SQLSMALLINT BufferLength, SQLSMALLINT* TextLengthPtr));
+                (SQLSMALLINT HandleType, SQLHANDLE Handle, SQLSMALLINT RecNumber, SQLCHAR* SQLState,
+                 SQLINTEGER* NativeErrorPtr, SQLCHAR* MessageText, SQLSMALLINT BufferLength,
+                 SQLSMALLINT* TextLengthPtr));
 };
 
 /**

@@ -1,6 +1,8 @@
-#include <gtest/gtest.h>
-#include <databricks/jobs/jobs.h>
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include <databricks/core/config.h>
+#include <databricks/jobs/jobs.h>
+#include <gtest/gtest.h>
 
 // Test fixture for Jobs tests
 class JobsTest : public ::testing::Test {
@@ -16,9 +18,7 @@ protected:
 
 // Test: Jobs client construction
 TEST_F(JobsTest, ConstructorCreatesValidClient) {
-    ASSERT_NO_THROW({
-        databricks::Jobs jobs(auth);
-    });
+    ASSERT_NO_THROW({ databricks::Jobs jobs(auth); });
 }
 
 // Test: Job struct initialization and default values
@@ -91,9 +91,7 @@ TEST(JobStructTest, HandlesMissingFields) {
 TEST(JobStructTest, RejectsInvalidJson) {
     std::string invalid_json = "not valid json";
 
-    EXPECT_THROW({
-        databricks::Job::from_json(invalid_json);
-    }, std::runtime_error);
+    EXPECT_THROW({ databricks::Job::from_json(invalid_json); }, std::runtime_error);
 }
 
 // Test: JobRun struct initialization and default values
@@ -146,15 +144,13 @@ TEST(JobRunStructTest, HandlesRunningJob) {
 
     EXPECT_EQ(run.run_id, 987654321);
     EXPECT_EQ(run.state, "RUNNING");
-    EXPECT_EQ(run.end_time, 0);  // Running jobs have no end time
-    EXPECT_EQ(run.result_state, "");  // No result yet
+    EXPECT_EQ(run.end_time, 0);      // Running jobs have no end time
+    EXPECT_EQ(run.result_state, ""); // No result yet
 }
 
 // Test: JobRun struct handles different lifecycle states
 TEST(JobRunStructTest, HandlesDifferentStates) {
-    std::vector<std::string> states = {
-        "PENDING", "RUNNING", "TERMINATING", "TERMINATED", "SKIPPED", "INTERNAL_ERROR"
-    };
+    std::vector<std::string> states = {"PENDING", "RUNNING", "TERMINATING", "TERMINATED", "SKIPPED", "INTERNAL_ERROR"};
 
     for (const auto& state : states) {
         std::string json = R"({"run_id": 1, "job_id": 1, "state": {"life_cycle_state": ")" + state + R"("}})";
@@ -166,9 +162,7 @@ TEST(JobRunStructTest, HandlesDifferentStates) {
 
 // Test: JobRun struct handles different result states
 TEST(JobRunStructTest, HandlesDifferentResultStates) {
-    std::vector<std::string> results = {
-        "SUCCESS", "FAILED", "TIMEDOUT", "CANCELED"
-    };
+    std::vector<std::string> results = {"SUCCESS", "FAILED", "TIMEDOUT", "CANCELED"};
 
     for (const auto& result : results) {
         std::string json = R"({
@@ -176,7 +170,8 @@ TEST(JobRunStructTest, HandlesDifferentResultStates) {
             "job_id": 1,
             "state": {
                 "life_cycle_state": "TERMINATED",
-                "result_state": ")" + result + R"("
+                "result_state": ")" +
+                           result + R"("
             }
         })";
 
@@ -204,9 +199,7 @@ TEST(JobRunStructTest, HandlesLargeIds) {
 TEST(JobRunStructTest, RejectsInvalidJson) {
     std::string invalid_json = "invalid json";
 
-    EXPECT_THROW({
-        databricks::JobRun::from_json(invalid_json);
-    }, std::runtime_error);
+    EXPECT_THROW({ databricks::JobRun::from_json(invalid_json); }, std::runtime_error);
 }
 
 // Test: Jobs client can be constructed with minimal config
@@ -215,9 +208,7 @@ TEST_F(JobsTest, MinimalConfigConstruction) {
     minimal_auth.host = "https://minimal.databricks.com";
     minimal_auth.set_token("token");
 
-    ASSERT_NO_THROW({
-        databricks::Jobs jobs(minimal_auth);
-    });
+    ASSERT_NO_THROW({ databricks::Jobs jobs(minimal_auth); });
 }
 
 // Test: Multiple Jobs clients can coexist

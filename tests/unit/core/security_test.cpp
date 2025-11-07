@@ -1,7 +1,11 @@
-#include <gtest/gtest.h>
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include "databricks/core/config.h"
 #include "databricks/internal/secure_string.h"
+
 #include <cstring>
+
+#include <gtest/gtest.h>
 
 namespace databricks {
 namespace test {

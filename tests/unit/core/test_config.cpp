@@ -1,9 +1,12 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include <databricks/core/config.h>
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include <cstdlib>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+
+#include <databricks/core/config.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace fs = std::filesystem;
 
@@ -216,9 +219,7 @@ TEST_F(ConfigTest, FromEnvironmentThrowsWhenNoConfig) {
     unsetenv("DATABRICKS_TOKEN");
     unsetenv("DATABRICKS_ACCESS_TOKEN");
 
-    EXPECT_THROW({
-        databricks::AuthConfig::from_environment();
-    }, std::runtime_error);
+    EXPECT_THROW({ databricks::AuthConfig::from_environment(); }, std::runtime_error);
 }
 
 /**
@@ -281,4 +282,3 @@ TEST_F(ConfigTest, PoolingConfigValidation) {
     pooling.connection_timeout_ms = 0;
     EXPECT_FALSE(pooling.is_valid());
 }
-

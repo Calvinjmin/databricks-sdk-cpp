@@ -506,16 +506,45 @@ open docs/html/index.html  # macOS
 
 ---
 
+## Contributing
+
+Contributions are welcome! We appreciate bug reports, feature requests, documentation improvements, and code contributions.
+
+### How to Contribute
+
+1. **Report Issues**: Found a bug? [Open an issue](https://github.com/calvinjmin/databricks-sdk-cpp/issues/new/choose)
+2. **Suggest Features**: Have an idea? [Start a discussion](https://github.com/calvinjmin/databricks-sdk-cpp/discussions)
+3. **Submit Changes**: See our [Contributing Guide](CONTRIBUTING.md) for details
+
+### Quick Start for Contributors
+
+```bash
+# Fork and clone
+git clone https://github.com/YOUR_USERNAME/databricks-sdk-cpp.git
+cd databricks-sdk-cpp
+
+# Build and test
+make build-all
+make test
+
+# Make changes, then format
+make format
+
+# Submit a pull request
+```
+
+### Good First Issues
+
+New contributors can look for issues labeled [`good first issue`](https://github.com/calvinjmin/databricks-sdk-cpp/labels/good%20first%20issue) to get started.
+
 ## License
 
 MIT License - see [LICENSE](./LICENSE) file for details.
 
-## Contributing
-
-Contributions are welcome! Please submit a Pull Request.
-
 ## Support
 
-For issues and questions, open an issue on the [GitHub repository](https://github.com/calvinjmin/databricks-sdk-cpp/issues).
+- **Issues**: [GitHub Issues](https://github.com/calvinjmin/databricks-sdk-cpp/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/calvinjmin/databricks-sdk-cpp/discussions)
+- **Security**: See [SECURITY.md](SECURITY.md) for vulnerability reporting
 
 **Author**: Calvin Min (calvinjmin@gmail.com)

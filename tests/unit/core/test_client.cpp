@@ -1,16 +1,15 @@
-#include <gtest/gtest.h>
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include <databricks/core/client.h>
 #include <databricks/core/config.h>
+#include <gtest/gtest.h>
 
 /**
  * @brief Test client construction with Builder and invalid config
  */
 TEST(ClientTest, BuilderWithInvalidConfig) {
     // Creating a client without auth config should throw
-    EXPECT_THROW({
-        databricks::Client::Builder()
-            .build();
-    }, std::runtime_error);
+    EXPECT_THROW({ databricks::Client::Builder().build(); }, std::runtime_error);
 }
 
 /**
@@ -26,10 +25,7 @@ TEST(ClientTest, BuilderConstruction) {
     sql.http_path = "/sql/1.0/warehouses/test";
 
     // This should not throw since we have all required fields
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .build();
+    auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).build();
 
     const auto& retrieved_auth = client.get_auth_config();
     const auto& retrieved_sql = client.get_sql_config();
@@ -52,14 +48,9 @@ TEST(ClientTest, InvalidCredentialsThrow) {
     sql.http_path = "/sql/1.0/warehouses/invalid";
 
     // Client uses lazy connection, so it won't throw until connect() or query()
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .build();
+    auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).build();
 
-    EXPECT_THROW({
-        client.connect();
-    }, std::exception);
+    EXPECT_THROW({ client.connect(); }, std::exception);
 }
 
 /**
@@ -80,11 +71,7 @@ TEST(ClientTest, RetryConstructionEnabled) {
     retry.backoff_multiplier = 3.0;
     retry.max_backoff_ms = 15000;
 
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_retry(retry)
-        .build();
+    auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_retry(retry).build();
 
     // Verify configuration was applied correctly
     EXPECT_EQ(client.get_auth_config().host, "https://test.databricks.com");
@@ -105,11 +92,7 @@ TEST(ClientTest, RetryConstructionDisabled) {
     databricks::RetryConfig retry;
     retry.enabled = false;
 
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_retry(retry)
-        .build();
+    auto client = databricks::Client::Builder().with_auth(auth).with_sql(sql).with_retry(retry).build();
 
     // Verify client was constructed successfully
     EXPECT_EQ(client.get_auth_config().host, "https://test.databricks.com");
@@ -196,12 +179,8 @@ TEST(ClientTest, PoolingAndRetryConfiguration) {
     retry.enabled = true;
     retry.max_attempts = 4;
 
-    auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_pooling(pooling)
-        .with_retry(retry)
-        .build();
+    auto client =
+        databricks::Client::Builder().with_auth(auth).with_sql(sql).with_pooling(pooling).with_retry(retry).build();
 
     const auto& retrieved_pooling = client.get_pooling_config();
     EXPECT_TRUE(retrieved_pooling.enabled);
@@ -220,20 +199,14 @@ TEST(ClientTest, MoveSemantics) {
     databricks::SQLConfig sql;
     sql.http_path = "/sql/1.0/warehouses/test";
 
-    auto client1 = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .build();
+    auto client1 = databricks::Client::Builder().with_auth(auth).with_sql(sql).build();
 
     // Move constructor
     auto client2 = std::move(client1);
     EXPECT_EQ(client2.get_auth_config().host, "https://test.databricks.com");
 
     // Move assignment
-    auto client3 = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .build();
+    auto client3 = databricks::Client::Builder().with_auth(auth).with_sql(sql).build();
 
     client3 = std::move(client2);
     EXPECT_EQ(client3.get_auth_config().host, "https://test.databricks.com");
@@ -259,12 +232,12 @@ TEST(ClientTest, BuilderChaining) {
 
     // Test fluent chaining of all builder methods
     auto client = databricks::Client::Builder()
-        .with_auth(auth)
-        .with_sql(sql)
-        .with_pooling(pooling)
-        .with_retry(retry)
-        .with_auto_connect(false)
-        .build();
+                      .with_auth(auth)
+                      .with_sql(sql)
+                      .with_pooling(pooling)
+                      .with_retry(retry)
+                      .with_auto_connect(false)
+                      .build();
 
     EXPECT_EQ(client.get_auth_config().host, "https://test.databricks.com");
     EXPECT_EQ(client.get_sql_config().http_path, "/sql/1.0/warehouses/test");
@@ -279,9 +252,5 @@ TEST(ClientTest, MissingSQLConfig) {
     auth.host = "https://test.databricks.com";
     auth.set_token("test_token");
 
-    EXPECT_THROW({
-        databricks::Client::Builder()
-            .with_auth(auth)
-            .build();
-    }, std::runtime_error);
-} 
+    EXPECT_THROW({ databricks::Client::Builder().with_auth(auth).build(); }, std::runtime_error);
+}

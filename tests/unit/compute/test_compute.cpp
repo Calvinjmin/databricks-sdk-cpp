@@ -1,8 +1,10 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include <databricks/compute/compute.h>
 #include <databricks/compute/compute_types.h>
 #include <databricks/core/config.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <mock_http_client.h>
 
 // Test fixture for Compute tests
@@ -23,9 +25,7 @@ protected:
 
 // Test: Compute client construction
 TEST_F(ComputeTest, ConstructorCreatesValidClient) {
-    ASSERT_NO_THROW({
-        databricks::Compute compute(auth);
-    });
+    ASSERT_NO_THROW({ databricks::Compute compute(auth); });
 }
 
 // Test: Compute client can be constructed with minimal config
@@ -34,9 +34,7 @@ TEST_F(ComputeTest, MinimalConfigConstruction) {
     minimal_auth.host = "https://minimal.databricks.com";
     minimal_auth.set_token("token");
 
-    ASSERT_NO_THROW({
-        databricks::Compute compute(minimal_auth);
-    });
+    ASSERT_NO_THROW({ databricks::Compute compute(minimal_auth); });
 }
 
 // Test: Multiple Compute clients can coexist
@@ -107,10 +105,8 @@ TEST(ClusterStructTest, HandlesCustomTags) {
 
 // Test: Cluster struct handles various cluster states
 TEST(ClusterStructTest, HandlesDifferentStates) {
-    std::vector<std::string> states = {
-        "PENDING", "RUNNING", "RESTARTING", "RESIZING",
-        "TERMINATING", "TERMINATED", "ERROR", "UNKNOWN"
-    };
+    std::vector<std::string> states = {"PENDING",     "RUNNING",    "RESTARTING", "RESIZING",
+                                       "TERMINATING", "TERMINATED", "ERROR",      "UNKNOWN"};
 
     for (const auto& state : states) {
         databricks::Cluster cluster;
@@ -121,11 +117,7 @@ TEST(ClusterStructTest, HandlesDifferentStates) {
 
 // Test: Cluster struct handles Spark versions
 TEST(ClusterStructTest, HandlesSparkVersions) {
-    std::vector<std::string> versions = {
-        "11.3.x-scala2.12",
-        "12.2.x-photon-scala2.12",
-        "13.0.x-cpu-ml-scala2.12"
-    };
+    std::vector<std::string> versions = {"11.3.x-scala2.12", "12.2.x-photon-scala2.12", "13.0.x-cpu-ml-scala2.12"};
 
     for (const auto& version : versions) {
         databricks::Cluster cluster;
@@ -136,12 +128,7 @@ TEST(ClusterStructTest, HandlesSparkVersions) {
 
 // Test: Cluster struct handles node types
 TEST(ClusterStructTest, HandlesNodeTypes) {
-    std::vector<std::string> node_types = {
-        "i3.xlarge",
-        "m5.4xlarge",
-        "r5.2xlarge",
-        "Standard_DS3_v2"
-    };
+    std::vector<std::string> node_types = {"i3.xlarge", "m5.4xlarge", "r5.2xlarge", "Standard_DS3_v2"};
 
     for (const auto& node_type : node_types) {
         databricks::Cluster cluster;
@@ -153,8 +140,8 @@ TEST(ClusterStructTest, HandlesNodeTypes) {
 // Test: Cluster struct handles timestamps
 TEST(ClusterStructTest, HandlesTimestamps) {
     databricks::Cluster cluster;
-    cluster.start_time = 1609459200000;        // 2021-01-01 00:00:00 UTC
-    cluster.terminated_time = 1609462800000;    // 2021-01-01 01:00:00 UTC
+    cluster.start_time = 1609459200000;      // 2021-01-01 00:00:00 UTC
+    cluster.terminated_time = 1609462800000; // 2021-01-01 01:00:00 UTC
 
     EXPECT_EQ(cluster.start_time, 1609459200000);
     EXPECT_EQ(cluster.terminated_time, 1609462800000);
@@ -166,7 +153,7 @@ TEST(ClusterStructTest, HandlesRunningCluster) {
     databricks::Cluster cluster;
     cluster.state = "RUNNING";
     cluster.start_time = 1609459200000;
-    cluster.terminated_time = 0;  // Running clusters have no termination time
+    cluster.terminated_time = 0; // Running clusters have no termination time
 
     EXPECT_EQ(cluster.state, "RUNNING");
     EXPECT_GT(cluster.start_time, 0);
@@ -223,11 +210,8 @@ TEST(ClusterStateEnumTest, ToStringConversion) {
 // Test: ClusterStateEnum round-trip conversion
 TEST(ClusterStateEnumTest, RoundTripConversion) {
     std::vector<databricks::ClusterStateEnum> states = {
-        databricks::ClusterStateEnum::PENDING,
-        databricks::ClusterStateEnum::RUNNING,
-        databricks::ClusterStateEnum::TERMINATED,
-        databricks::ClusterStateEnum::ERROR
-    };
+        databricks::ClusterStateEnum::PENDING, databricks::ClusterStateEnum::RUNNING,
+        databricks::ClusterStateEnum::TERMINATED, databricks::ClusterStateEnum::ERROR};
 
     for (const auto& state : states) {
         std::string state_str = databricks::cluster_state_to_string(state);
@@ -337,8 +321,7 @@ TEST(CreateComputeMockTest, SuccessfulCreateMinimalConfig) {
         .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response("test-cluster-123")));
 
     // check_response should be called and not throw
-    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
-        .Times(1);
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute")).Times(1);
 
     // Create Compute client with mocked HTTP client
     databricks::Compute compute(mock_http);
@@ -364,8 +347,7 @@ TEST(CreateComputeMockTest, SuccessfulCreateWithCustomTags) {
     EXPECT_CALL(*mock_http, post("/clusters/create", _))
         .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response()));
 
-    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
-        .Times(1);
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute")).Times(1);
 
     databricks::Compute compute(mock_http);
 
@@ -386,12 +368,9 @@ TEST(CreateComputeMockTest, SuccessfulCreateSingleNode) {
     auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
 
     EXPECT_CALL(*mock_http, post("/clusters/create", _))
-        .WillOnce(Return(databricks::test::MockHttpClient::success_response(
-            R"({"cluster_id": "single-node-123"})"
-        )));
+        .WillOnce(Return(databricks::test::MockHttpClient::success_response(R"({"cluster_id": "single-node-123"})")));
 
-    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
-        .Times(1);
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute")).Times(1);
 
     databricks::Compute compute(mock_http);
 
@@ -399,7 +378,7 @@ TEST(CreateComputeMockTest, SuccessfulCreateSingleNode) {
     config.cluster_name = "single-node-cluster";
     config.spark_version = "13.0.x-scala2.12";
     config.node_type_id = "i3.2xlarge";
-    config.num_workers = 0;  // Single-node mode
+    config.num_workers = 0; // Single-node mode
 
     bool result = compute.create_compute(config);
     EXPECT_TRUE(result);
@@ -412,13 +391,10 @@ TEST(CreateComputeMockTest, VerifyJSONPayload) {
     // Capture the JSON body sent in POST request
     std::string captured_body;
     EXPECT_CALL(*mock_http, post("/clusters/create", _))
-        .WillOnce(::testing::DoAll(
-            ::testing::SaveArg<1>(&captured_body),
-            Return(databricks::test::MockHttpClient::cluster_created_response())
-        ));
+        .WillOnce(::testing::DoAll(::testing::SaveArg<1>(&captured_body),
+                                   Return(databricks::test::MockHttpClient::cluster_created_response())));
 
-    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
-        .Times(1);
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute")).Times(1);
 
     databricks::Compute compute(mock_http);
 
@@ -445,9 +421,7 @@ TEST(CreateComputeMockTest, HandleBadRequestError) {
     auto mock_http = std::make_shared<databricks::test::MockHttpClient>();
 
     EXPECT_CALL(*mock_http, post("/clusters/create", _))
-        .WillOnce(Return(databricks::test::MockHttpClient::bad_request_response(
-            "Invalid cluster configuration"
-        )));
+        .WillOnce(Return(databricks::test::MockHttpClient::bad_request_response("Invalid cluster configuration")));
 
     // check_response should throw on 400 error
     EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
@@ -461,9 +435,7 @@ TEST(CreateComputeMockTest, HandleBadRequestError) {
     config.node_type_id = "invalid-type";
     config.num_workers = 2;
 
-    EXPECT_THROW({
-        compute.create_compute(config);
-    }, std::runtime_error);
+    EXPECT_THROW({ compute.create_compute(config); }, std::runtime_error);
 }
 
 // Test: Error handling - API returns 401 Unauthorized
@@ -484,9 +456,7 @@ TEST(CreateComputeMockTest, HandleUnauthorizedError) {
     config.node_type_id = "i3.xlarge";
     config.num_workers = 2;
 
-    EXPECT_THROW({
-        compute.create_compute(config);
-    }, std::runtime_error);
+    EXPECT_THROW({ compute.create_compute(config); }, std::runtime_error);
 }
 
 // Test: Error handling - API returns 500 Internal Server Error
@@ -507,9 +477,7 @@ TEST(CreateComputeMockTest, HandleServerError) {
     config.node_type_id = "i3.xlarge";
     config.num_workers = 2;
 
-    EXPECT_THROW({
-        compute.create_compute(config);
-    }, std::runtime_error);
+    EXPECT_THROW({ compute.create_compute(config); }, std::runtime_error);
 }
 
 // Test: Cluster config without custom tags (should not include custom_tags in JSON)
@@ -518,13 +486,10 @@ TEST(CreateComputeMockTest, ClusterWithoutCustomTags) {
 
     std::string captured_body;
     EXPECT_CALL(*mock_http, post("/clusters/create", _))
-        .WillOnce(::testing::DoAll(
-            ::testing::SaveArg<1>(&captured_body),
-            Return(databricks::test::MockHttpClient::cluster_created_response())
-        ));
+        .WillOnce(::testing::DoAll(::testing::SaveArg<1>(&captured_body),
+                                   Return(databricks::test::MockHttpClient::cluster_created_response())));
 
-    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
-        .Times(1);
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute")).Times(1);
 
     databricks::Compute compute(mock_http);
 
@@ -552,8 +517,7 @@ TEST(CreateComputeMockTest, CreateMultipleClustersSequentially) {
         .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response("cluster-2")))
         .WillOnce(Return(databricks::test::MockHttpClient::cluster_created_response("cluster-3")));
 
-    EXPECT_CALL(*mock_http, check_response(_, "createCompute"))
-        .Times(3);
+    EXPECT_CALL(*mock_http, check_response(_, "createCompute")).Times(3);
 
     databricks::Compute compute(mock_http);
 

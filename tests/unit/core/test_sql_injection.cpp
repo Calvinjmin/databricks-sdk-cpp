@@ -1,6 +1,9 @@
-#include <gtest/gtest.h>
-#include <databricks/core/client.h>
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include "../mocks/mock_odbc.h"
+
+#include <databricks/core/client.h>
+#include <gtest/gtest.h>
 
 /**
  * @brief Test suite for SQL injection prevention
@@ -25,11 +28,7 @@ protected:
         databricks::RetryConfig retry;
         retry.enabled = false;
 
-        return databricks::Client::Builder()
-            .with_auth(auth)
-            .with_sql(sql)
-            .with_retry(retry)
-            .build();
+        return databricks::Client::Builder().with_auth(auth).with_sql(sql).with_retry(retry).build();
     }
 };
 
@@ -92,14 +91,12 @@ TEST_F(SQLInjectionTest, SQLInjectionAttemptsSafe) {
     auto client = create_client();
 
     // Common SQL injection patterns
-    std::vector<std::string> malicious_inputs = {
-        "'; DROP TABLE users; --",
-        "' OR '1'='1",
-        "admin'--",
-        "' UNION SELECT * FROM passwords--",
-        "1; DELETE FROM users WHERE '1'='1",
-        "'; EXEC sp_MSForEachTable 'DROP TABLE ?'; --"
-    };
+    std::vector<std::string> malicious_inputs = {"'; DROP TABLE users; --",
+                                                 "' OR '1'='1",
+                                                 "admin'--",
+                                                 "' UNION SELECT * FROM passwords--",
+                                                 "1; DELETE FROM users WHERE '1'='1",
+                                                 "'; EXEC sp_MSForEachTable 'DROP TABLE ?'; --"};
 
     for (const auto& malicious : malicious_inputs) {
         std::string sql = "SELECT * FROM users WHERE id = ?";
@@ -116,8 +113,7 @@ TEST_F(SQLInjectionTest, SQLInjectionAttemptsSafe) {
                 std::string error = e.what();
                 EXPECT_TRUE(error.find("syntax") == std::string::npos)
                     << "Malicious input caused SQL syntax error: " << malicious;
-                EXPECT_TRUE(error.find("DROP") == std::string::npos)
-                    << "Malicious input was executed: " << malicious;
+                EXPECT_TRUE(error.find("DROP") == std::string::npos) << "Malicious input was executed: " << malicious;
             }
         });
     }
@@ -130,7 +126,7 @@ TEST_F(SQLInjectionTest, EmptyParameters) {
     auto client = create_client();
 
     std::string sql = "SELECT * FROM users";
-    std::vector<databricks::Client::Parameter> params = {};  // No parameters
+    std::vector<databricks::Client::Parameter> params = {}; // No parameters
 
     EXPECT_NO_THROW({
         try {
@@ -150,15 +146,8 @@ TEST_F(SQLInjectionTest, SpecialCharactersInParameters) {
     auto client = create_client();
 
     std::vector<std::string> special_chars = {
-        "value with spaces",
-        "value'with'quotes",
-        "value\"with\"doublequotes",
-        "value\nwith\nnewlines",
-        "value\twith\ttabs",
-        "value\\with\\backslashes",
-        "value%with%wildcards",
-        "value_with_underscores"
-    };
+        "value with spaces", "value'with'quotes",        "value\"with\"doublequotes", "value\nwith\nnewlines",
+        "value\twith\ttabs", "value\\with\\backslashes", "value%with%wildcards",      "value_with_underscores"};
 
     for (const auto& value : special_chars) {
         std::string sql = "SELECT * FROM users WHERE name = ?";
@@ -187,7 +176,7 @@ TEST_F(SQLInjectionTest, ParameterCountMismatch) {
 
     // SQL expects 2 parameters but we provide 1
     std::string sql = "SELECT * FROM users WHERE name = ? AND age = ?";
-    std::vector<databricks::Client::Parameter> params = {{"John"}};  // Missing one!
+    std::vector<databricks::Client::Parameter> params = {{"John"}}; // Missing one!
 
     // This should either:
     // 1. Throw an error about parameter count (ideal)

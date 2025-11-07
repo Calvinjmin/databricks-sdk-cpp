@@ -1,0 +1,12 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/calvinjmin/databricks-sdk-cpp/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📚 Documentation
+    url: https://calvinjmin.github.io/databricks-sdk-cpp/
+    about: Read the API documentation
+  - name: 🔒 Security Vulnerability
+    url: https://github.com/calvinjmin/databricks-sdk-cpp/security/advisories/new
+    about: Report a security vulnerability (private)
+
