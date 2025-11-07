@@ -50,6 +50,16 @@ int main() {
         std::cout << "  Doubled: " << data[0][1] << std::endl;
         std::cout << std::endl;
 
+        // Example 3: Shared Query
+        std::cout << "=== Example 3: Shared Query ===" << std::endl;
+
+        std::string shared_query = "SELECT * FROM samples.nyctaxi.trips WHERE trip_distance > ? LIMIT 5";
+        std::vector<databricks::Client::Parameter> shared_params = {{"0.5"}};
+
+        auto shared_results = client.query(shared_query, shared_params);
+        std::cout << "Shared results: " << shared_results[0][0] << std::endl;
+        std::cout << std::endl;
+
         std::cout << "Note: Parameterized queries protect against SQL injection" << std::endl;
         std::cout << "      Always use them when incorporating user input!" << std::endl;
     } catch (const std::exception& e) {
