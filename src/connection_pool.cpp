@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include "databricks/connection_pool.h"
 
 #include "databricks/core/client.h"

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include "databricks/jobs/jobs.h"
 
 #include "../internal/http_client.h"

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include <databricks/core/config.h>
 #include <databricks/jobs/jobs.h>
 #include <gtest/gtest.h>

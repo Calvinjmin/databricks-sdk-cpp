@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 /**
  * @file unity_catalog_example.cpp
  * @brief Example demonstrating the Databricks Unity Catalog API

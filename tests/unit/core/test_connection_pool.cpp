@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include <chrono>
 #include <thread>
 #include <vector>

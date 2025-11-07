@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #include "databricks/compute/compute.h"
 
 #include "../internal/http_client.h"

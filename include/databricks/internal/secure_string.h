@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #ifndef DATABRICKS_INTERNAL_SECURE_STRING_H
 #define DATABRICKS_INTERNAL_SECURE_STRING_H
 

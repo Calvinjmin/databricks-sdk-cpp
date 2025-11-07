@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 /**
  * @file jobs_example.cpp
  * @brief Example demonstrating the Databricks Jobs API

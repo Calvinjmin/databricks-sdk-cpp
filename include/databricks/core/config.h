@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "databricks/internal/secure_string.h"

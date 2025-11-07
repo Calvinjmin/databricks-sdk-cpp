@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Calvin Min
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include "../../src/internal/http_client_interface.h"
