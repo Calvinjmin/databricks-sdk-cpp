@@ -54,4 +54,23 @@ struct JobRun {
     static JobRun from_json(const std::string& json_str);
 };
 
+/**
+ * @brief Represents a run output object for a Databricks job
+ *
+ * This struct contains the key fields from a Databricks job including logs, errors, and metadata.
+ */
+struct RunOutput {
+    std::string notebook_output;                 ///< Output from notebook tasks (JSON)
+    std::string sql_output;                      ///< Output from SQL tasks
+    std::string logs;                            ///< Execution logs
+    std::string error;                           ///< Error message if run failed
+    std::string error_trace;                     ///< Stack trace if available
+    std::map<std::string, std::string> metadata; ///< Additional output metadata
+
+    /**
+     * @brief Parse RunOutput from JSON string
+     */
+    static RunOutput from_json(const std::string& json_str);
+};
+
 } // namespace databricks
