@@ -117,7 +117,7 @@ RunOutput RunOutput::from_json(const std::string& json_str) {
         }
 
         return run_output;
-    } catch (const json::exception(e)) {
+    } catch (const json::exception& e) {
         throw std::runtime_error("Failed to parse RunOutput JSON: " + std::string(e.what()));
     }
 }
@@ -226,7 +226,7 @@ bool Jobs::cancel_run(uint64_t run_id) {
     // Make API request
     auto response = pimpl_->http_client_->post("/jobs/runs/cancel", body);
     pimpl_->http_client_->check_response(response, "cancelJob");
-    internal::get_logger()->error("Failed to cancel run for run_id=" + std::to_string(run_id));
+    internal::get_logger()->info("Successfully cancelled run for run_id=" + std::to_string(run_id));
 
     return true;
 }
