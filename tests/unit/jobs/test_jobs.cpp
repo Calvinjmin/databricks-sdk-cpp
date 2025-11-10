@@ -1,13 +1,14 @@
 // Copyright (c) 2025 Calvin Min
 // SPDX-License-Identifier: MIT
+#include "../../mocks/mock_http_client.h"
+
 #include <databricks/core/config.h>
 #include <databricks/jobs/jobs.h>
 #include <gtest/gtest.h>
-#include "../../mocks/mock_http_client.h"
 
-using ::testing::Return;
-using ::testing::_;
 using databricks::test::MockHttpClient;
+using ::testing::_;
+using ::testing::Return;
 
 // Test fixture for Jobs tests
 class JobsTest : public ::testing::Test {
@@ -253,8 +254,7 @@ TEST_F(JobsApiTest, CancelRunReturnsTrueAndCallsApi) {
         .WillOnce(Return(MockHttpClient::success_response(R"({"result":"OK"})")));
 
     // check_response should be called and not throw
-    EXPECT_CALL(*mock_client, check_response(_, "cancelJob"))
-        .Times(1);
+    EXPECT_CALL(*mock_client, check_response(_, "cancelJob")).Times(1);
 
     // Execute call with Mock Client
     databricks::Jobs jobs(mock_client);
@@ -266,13 +266,10 @@ TEST_F(JobsApiTest, GetRunOutputCompleted) {
     // Setup
     auto mock_client = std::make_shared<MockHttpClient>();
 
-    EXPECT_CALL(
-        *mock_client,
-        get("/jobs/runs/get-output?run_id=123")
-    ).WillOnce(Return(MockHttpClient::success_response(R"({"notebook_output":"success"} )")));
+    EXPECT_CALL(*mock_client, get("/jobs/runs/get-output?run_id=123"))
+        .WillOnce(Return(MockHttpClient::success_response(R"({"notebook_output":"success"} )")));
 
-    EXPECT_CALL(*mock_client, check_response(_, "getRunOutput"))
-        .Times(1);
+    EXPECT_CALL(*mock_client, check_response(_, "getRunOutput")).Times(1);
 
     databricks::Jobs jobs(mock_client);
     auto output = jobs.get_run_output(123);
@@ -286,8 +283,7 @@ TEST_F(JobsApiTest, GetRunOutputFailedRun) {
     EXPECT_CALL(*mock_client, get("/jobs/runs/get-output?run_id=123"))
         .WillOnce(Return(MockHttpClient::success_response(R"({"error":"error message","notebook_output":"failed"})")));
 
-    EXPECT_CALL(*mock_client, check_response(_, "getRunOutput"))
-        .Times(1);
+    EXPECT_CALL(*mock_client, check_response(_, "getRunOutput")).Times(1);
 
     databricks::Jobs jobs(mock_client);
     auto output = jobs.get_run_output(123);
