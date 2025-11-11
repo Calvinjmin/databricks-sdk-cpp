@@ -56,6 +56,50 @@ build-all:
 test: build-tests
 	cd $(BUILD_DIR) && ctest --output-on-failure
 
+# Run only tests related to modified files (based on git status)
+.PHONY: test-new
+test-new: build-tests
+	@echo "Running tests for modified files..."
+	@MODIFIED_FILES=$$(git status --short | grep -E '^\s*M.*\.(cpp|h)' | awk '{print $$2}' | grep -E 'test|jobs|compute|unity' || true); \
+	if [ -z "$$MODIFIED_FILES" ]; then \
+		echo "No modified test files detected. Running all tests..."; \
+		cd $(BUILD_DIR)/tests && ./unit_tests; \
+	else \
+		echo "Modified files: $$MODIFIED_FILES"; \
+		if echo "$$MODIFIED_FILES" | grep -q "jobs"; then \
+			echo "Running Jobs tests..."; \
+			cd $(BUILD_DIR)/tests && ./unit_tests --gtest_filter='*Job*'; \
+		elif echo "$$MODIFIED_FILES" | grep -q "compute"; then \
+			echo "Running Compute tests..."; \
+			cd $(BUILD_DIR)/tests && ./unit_tests --gtest_filter='*Compute*:*Cluster*'; \
+		elif echo "$$MODIFIED_FILES" | grep -q "unity"; then \
+			echo "Running Unity Catalog tests..."; \
+			cd $(BUILD_DIR)/tests && ./unit_tests --gtest_filter='*UnityCatalog*'; \
+		else \
+			echo "Running all tests for safety..."; \
+			cd $(BUILD_DIR)/tests && ./unit_tests; \
+		fi \
+	fi
+
+# Run tests with custom filter
+# Usage: make test-filter FILTER='JobsApiTest.*'
+.PHONY: test-filter
+test-filter: build-tests
+	@if [ -z "$(FILTER)" ]; then \
+		echo "Usage: make test-filter FILTER='pattern'"; \
+		echo "Example: make test-filter FILTER='JobsApiTest.*'"; \
+		echo "Example: make test-filter FILTER='*Cancel*'"; \
+		exit 1; \
+	fi
+	@echo "Running tests matching filter: $(FILTER)"
+	cd $(BUILD_DIR)/tests && ./unit_tests --gtest_filter='$(FILTER)'
+
+# List all available tests
+.PHONY: test-list
+test-list: build-tests
+	@echo "Available test cases:"
+	cd $(BUILD_DIR)/tests && ./unit_tests --gtest_list_tests
+
 # Clean build artifacts
 .PHONY: clean
 clean:
@@ -166,7 +210,10 @@ help:
 	@echo "  make clean         - Remove build artifacts"
 	@echo ""
 	@echo "Testing:"
-	@echo "  make test          - Run tests"
+	@echo "  make test          - Run all tests"
+	@echo "  make test-new      - Run tests for modified files (smart)"
+	@echo "  make test-filter FILTER='pattern' - Run tests matching pattern"
+	@echo "  make test-list     - List all available test cases"
 	@echo "  make benchmark     - Run connection pooling benchmark"
 	@echo ""
 	@echo "Documentation:"

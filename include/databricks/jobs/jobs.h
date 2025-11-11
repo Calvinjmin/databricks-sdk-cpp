@@ -97,6 +97,26 @@ public:
      */
     uint64_t run_now(uint64_t job_id, const std::map<std::string, std::string>& notebook_params = {});
 
+    /**
+     * @brief Cancel a running or pending job run
+     *
+     * @param run_id The unique identifier of the job run to cancel
+     * @return true if the cancellation request was successful
+     * @throws std::runtime_error if the API request fails
+     */
+    bool cancel_run(uint64_t run_id);
+
+    /**
+     * @brief Get the output of a completed job run
+     *
+     * @param run_id The unique identifier of the job run output
+     * @return RunOuput object containing execution output and logs
+     * @throws std::runtime_error if the API request fails, or if the run is not found
+     *
+     * @note Only completed runs have an output. Running jobs will return an error
+     */
+    RunOutput get_run_output(uint64_t run_id);
+
 private:
     class Impl;
     std::unique_ptr<Impl> pimpl_;

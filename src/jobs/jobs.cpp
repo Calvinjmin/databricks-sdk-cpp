@@ -53,7 +53,7 @@ std::string build_query_string(const std::map<std::string, std::string>& params)
 } // namespace
 
 // ============================================================================
-// Job and JobRun JSON Parsing
+// JSON Parsing Helper Functions
 // ============================================================================
 
 Job Job::from_json(const std::string& json_str) {
@@ -98,6 +98,27 @@ JobRun JobRun::from_json(const std::string& json_str) {
         return run;
     } catch (const json::exception& e) {
         throw std::runtime_error("Failed to parse JobRun JSON: " + std::string(e.what()));
+    }
+}
+
+RunOutput RunOutput::from_json(const std::string& json_str) {
+    try {
+        auto j = json::parse(json_str);
+        RunOutput run_output;
+
+        run_output.notebook_output = j.value("notebook_output", "");
+        run_output.sql_output = j.value("sql_output", "");
+        run_output.logs = j.value("logs", "");
+        run_output.error = j.value("error", "");
+        run_output.error_trace = j.value("error_trace", "");
+
+        if (j.contains("metadata")) {
+            run_output.metadata["raw"] = j["metadata"].dump();
+        }
+
+        return run_output;
+    } catch (const json::exception& e) {
+        throw std::runtime_error("Failed to parse RunOutput JSON: " + std::string(e.what()));
     }
 }
 
@@ -190,6 +211,40 @@ uint64_t Jobs::run_now(uint64_t job_id, const std::map<std::string, std::string>
     } catch (const json::exception& e) {
         throw std::runtime_error("Failed to parse run response: " + std::string(e.what()));
     }
+}
+
+bool Jobs::cancel_run(uint64_t run_id) {
+    internal::get_logger()->info("Cancelling run for run_id=" + std::to_string(run_id));
+
+    // Build request body
+    json body_json;
+    body_json["run_id"] = run_id;
+    std::string body = body_json.dump();
+
+    internal::get_logger()->debug("Request body: " + body);
+
+    // Make API request
+    auto response = pimpl_->http_client_->post("/jobs/runs/cancel", body);
+    pimpl_->http_client_->check_response(response, "cancelJob");
+    internal::get_logger()->info("Successfully cancelled run for run_id=" + std::to_string(run_id));
+
+    return true;
+}
+
+RunOutput Jobs::get_run_output(uint64_t run_id) {
+    internal::get_logger()->info("Retrieving the output for run_id=" + std::to_string(run_id));
+
+    // Build query parameters
+    std::map<std::string, std::string> params;
+    params["run_id"] = std::to_string(run_id);
+
+    // Make API request
+    std::string query = build_query_string(params);
+    auto response = pimpl_->http_client_->get("/jobs/runs/get-output" + query);
+    pimpl_->http_client_->check_response(response, "getRunOutput");
+
+    internal::get_logger()->debug("Job run output response: " + response.body);
+    return RunOutput::from_json(response.body);
 }
 
 // ============================================================================
