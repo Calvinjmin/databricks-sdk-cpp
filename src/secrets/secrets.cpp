@@ -51,7 +51,7 @@ std::vector<SecretScope> Secrets::list_scopes() {
     return parse_scopes_list(response.body);
 }
 
-void Secrets::create_scope(SecretPermission secret_permissions, const std::string& scope,
+void Secrets::create_scope(const std::string& scope, const std::string& initial_manage_principal,
                            SecretScopeBackendType backend_type, const std::optional<std::string>& azure_resource_id,
                            const std::optional<std::string>& azure_tenant_id,
                            const std::optional<std::string>& dns_name) {
@@ -69,7 +69,7 @@ void Secrets::create_scope(SecretPermission secret_permissions, const std::strin
     // Build JSON Body
     json body_json;
     body_json["scope"] = scope;
-    body_json["initial_manage_principal"] = secret_permissions_to_string(secret_permissions);
+    body_json["initial_manage_principal"] = initial_manage_principal;
     body_json["backend_type"] = backend_type_to_string(backend_type);
 
     // Add Azure Key Vault configuration if needed
@@ -224,21 +224,6 @@ SecretACL SecretACL::from_json(const std::string& json_str) {
 }
 
 // ==================== PRIVATE HELPER METHODS ====================
-
-std::string Secrets::secret_permissions_to_string(SecretPermission secret_permission) const {
-    static const std::unordered_map<SecretPermission, std::string> permissions_map = {
-        {SecretPermission::READ, "READ"},
-        {SecretPermission::WRITE, "WRITE"},
-        {SecretPermission::MANAGE, "MANAGE"},
-        {SecretPermission::UNKNOWN, "UNKNOWN"},
-    };
-
-    auto it = permissions_map.find(secret_permission);
-    if (it != permissions_map.end()) {
-        return it->second;
-    }
-    throw std::invalid_argument("Unknown SecretPermission");
-}
 
 std::string Secrets::backend_type_to_string(SecretScopeBackendType backend_type) const {
     static const std::unordered_map<SecretScopeBackendType, std::string> backend_map = {

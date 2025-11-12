@@ -78,8 +78,12 @@ public:
     /**
      * @brief Create a new secret scope
      *
-     * @param secret_permissions The permissions to set for the secret scope
      * @param scope The name of the secret scope to create
+     * @param initial_manage_principal The principal (user or group) that will be granted MANAGE
+     *                                  permission on the new scope. Common values:
+     *                                  - "users": grants MANAGE access to all workspace users (default)
+     *                                  - "admins": grants MANAGE access to workspace admins only
+     *                                  - A specific user or group name
      * @param backend_type The type of backend (DATABRICKS or AZURE_KEYVAULT)
      * @param azure_resource_id Azure Key Vault resource ID (required for AZURE_KEYVAULT backend)
      * @param azure_tenant_id Azure tenant ID (required for AZURE_KEYVAULT backend)
@@ -90,7 +94,7 @@ public:
      * @note Databricks-backed scopes are stored in the control plane. Azure Key Vault-backed
      *       scopes are stored in your Azure Key Vault instance.
      */
-    void create_scope(SecretPermission secret_permissions, const std::string& scope,
+    void create_scope(const std::string& scope, const std::string& initial_manage_principal,
                       SecretScopeBackendType backend_type,
                       const std::optional<std::string>& azure_resource_id = std::nullopt,
                       const std::optional<std::string>& azure_tenant_id = std::nullopt,
@@ -147,7 +151,6 @@ private:
     class Impl;
     std::unique_ptr<Impl> pimpl_;
 
-    std::string secret_permissions_to_string(SecretPermission secret_permission) const;
     std::string backend_type_to_string(SecretScopeBackendType backend_type) const;
 
     // Helper methods for parsing API responses
