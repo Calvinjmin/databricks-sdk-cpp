@@ -60,7 +60,7 @@ test: build-tests
 .PHONY: test-new
 test-new: build-tests
 	@echo "Running tests for modified files..."
-	@MODIFIED_FILES=$$(git status --short | grep -E '^\s*M.*\.(cpp|h)' | awk '{print $$2}' | grep -E 'test|jobs|compute|unity' || true); \
+	@MODIFIED_FILES=$$(git status --short | grep -E '^\s*M.*\.(cpp|h)' | awk '{print $$2}' | grep -E 'test|jobs|compute|unity|secrets' || true); \
 	if [ -z "$$MODIFIED_FILES" ]; then \
 		echo "No modified test files detected. Running all tests..."; \
 		cd $(BUILD_DIR)/tests && ./unit_tests; \
@@ -75,6 +75,9 @@ test-new: build-tests
 		elif echo "$$MODIFIED_FILES" | grep -q "unity"; then \
 			echo "Running Unity Catalog tests..."; \
 			cd $(BUILD_DIR)/tests && ./unit_tests --gtest_filter='*UnityCatalog*'; \
+		elif echo "$$MODIFIED_FILES" | grep -q "secrets"; then \
+			echo "Running Secrets tests..."; \
+			cd $(BUILD_DIR)/tests && ./unit_tests --gtest_filter='*Secret*'; \
 		else \
 			echo "Running all tests for safety..."; \
 			cd $(BUILD_DIR)/tests && ./unit_tests; \

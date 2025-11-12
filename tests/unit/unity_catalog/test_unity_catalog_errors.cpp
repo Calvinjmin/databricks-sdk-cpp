@@ -3,17 +3,20 @@
 #include "databricks/core/config.h"
 #include "databricks/unity_catalog/unity_catalog.h"
 
+#include "../../src/internal/logger.h"
 #include "mock_http_client.h"
 
 #include <memory>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <spdlog/spdlog.h>
 
 using namespace databricks;
 using namespace databricks::test;
 using ::testing::_;
 using ::testing::HasSubstr;
+using ::testing::NiceMock;
 using ::testing::Return;
 
 // =============================================================================
@@ -23,12 +26,20 @@ using ::testing::Return;
 class UnityCatalogErrorTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        auto mock_client = std::make_shared<MockHttpClient>();
+        // Suppress log output during error tests
+        databricks::internal::get_logger()->set_level(spdlog::level::off);
+
+        auto mock_client = std::make_shared<NiceMock<MockHttpClient>>();
         mock_http_client_ = mock_client;
         unity_catalog_ = std::make_unique<UnityCatalog>(mock_client);
     }
 
-    std::shared_ptr<MockHttpClient> mock_http_client_;
+    void TearDown() override {
+        // Restore default log level after tests
+        databricks::internal::get_logger()->set_level(spdlog::level::info);
+    }
+
+    std::shared_ptr<NiceMock<MockHttpClient>> mock_http_client_;
     std::unique_ptr<UnityCatalog> unity_catalog_;
 };
 
