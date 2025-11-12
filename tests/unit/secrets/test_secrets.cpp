@@ -337,8 +337,7 @@ TEST_F(SecretsApiTest, CreateDatabricksScope) {
 
 // Test: Create scope with custom initial_manage_principal
 TEST_F(SecretsApiTest, CreateScopeWithCustomPrincipal) {
-    EXPECT_CALL(*mock_client_,
-                post("/secrets/scopes/create", HasSubstr("\"initial_manage_principal\":\"admins\"")))
+    EXPECT_CALL(*mock_client_, post("/secrets/scopes/create", HasSubstr("\"initial_manage_principal\":\"admins\"")))
         .WillOnce(Return(MockHttpClient::success_response("")));
 
     databricks::Secrets secrets(mock_client_);
@@ -368,10 +367,12 @@ TEST_F(SecretsApiTest, CreateAzureKeyVaultScopeThrowsWithoutRequiredParams) {
         std::invalid_argument);
 
     // Missing tenant_id
-    EXPECT_THROW({
-        secrets.create_scope("azure-scope", "users", databricks::SecretScopeBackendType::AZURE_KEYVAULT,
-                             "/subscriptions/abc/resourceGroups/rg/providers/Microsoft.KeyVault/vaults/vault");
-    }, std::invalid_argument);
+    EXPECT_THROW(
+        {
+            secrets.create_scope("azure-scope", "users", databricks::SecretScopeBackendType::AZURE_KEYVAULT,
+                                 "/subscriptions/abc/resourceGroups/rg/providers/Microsoft.KeyVault/vaults/vault");
+        },
+        std::invalid_argument);
 }
 
 // ============================================================================

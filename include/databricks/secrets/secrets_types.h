@@ -30,10 +30,10 @@ enum class SecretPermission {
  * @brief Represents a Secret Scope
  */
 struct SecretScope {
-    std::string name;                                               ///< Name of the secret scope
+    std::string name;                                                         ///< Name of the secret scope
     SecretScopeBackendType backend_type = SecretScopeBackendType::DATABRICKS; ///< Backend storage type
-    std::string resource_id;                                        ///< Azure Key Vault resource ID (for AZURE_KEYVAULT type)
-    std::string dns_name;                                           ///< Azure Key Vault DNS name (for AZURE_KEYVAULT type)
+    std::string resource_id; ///< Azure Key Vault resource ID (for AZURE_KEYVAULT type)
+    std::string dns_name;    ///< Azure Key Vault DNS name (for AZURE_KEYVAULT type)
 
     /**
      * @brief Parse a SecretScope from JSON string
@@ -64,7 +64,7 @@ struct Secret {
  * @brief Represents an Access Control List entry for a secret scope
  */
 struct SecretACL {
-    std::string principal;                          ///< User or group name
+    std::string principal;                                ///< User or group name
     SecretPermission permission = SecretPermission::READ; ///< Permission level (READ, WRITE, MANAGE)
 
     /**
