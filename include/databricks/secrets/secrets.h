@@ -6,6 +6,7 @@
 #include "databricks/secrets/secrets_types.h"
 
 #include <vector>
+#include <optional>
 
 namespace databricks {
 namespace internal {
@@ -46,8 +47,9 @@ public:
     /**
      * @brief Construct a Secrets API client
      * @param auth Authentication configuration with host and token
+     * @param api_version Secrets API version to use (default: "2.0")
      */
-    explicit Secrets(const AuthConfig& auth);
+    explicit Secrets(const AuthConfig& auth, const std::string& api_version="2.0");
 
     /**
      * @brief Construct a Secrets API client with dependency injection (for testing)
@@ -76,14 +78,24 @@ public:
     /**
      * @brief Create a new secret scope
      *
+     * @param secret_permissions The permissions to set for the secret scope
      * @param scope The name of the secret scope to create
      * @param backend_type The type of backend (DATABRICKS or AZURE_KEYVAULT)
+     * @param azure_resource_id Azure Key Vault resource ID (required for AZURE_KEYVAULT backend)
+     * @param azure_tenant_id Azure tenant ID (required for AZURE_KEYVAULT backend)
+     * @param dns_name Azure Key Vault DNS name (required for AZURE_KEYVAULT backend)
      * @throws std::runtime_error if the scope already exists or the API request fails
+     * @throws std::invalid_argument if Azure parameters are missing for AZURE_KEYVAULT backend
      *
      * @note Databricks-backed scopes are stored in the control plane. Azure Key Vault-backed
      *       scopes are stored in your Azure Key Vault instance.
      */
-    void create_scope(const std::string& scope, SecretScopeBackendType backend_type);
+    void create_scope(SecretPermission secret_permissions,
+        const std::string& scope, 
+        SecretScopeBackendType backend_type,
+        const std::optional<std::string>& azure_resource_id = std::nullopt,
+        const std::optional<std::string>& azure_tenant_id = std::nullopt,
+        const std::optional<std::string>& dns_name = std::nullopt);
 
     /**
      * @brief Delete a secret scope
@@ -112,19 +124,6 @@ public:
     void put_secret(const std::string& scope, const std::string& key, const std::string& value);
 
     /**
-     * @brief Store a secret as binary data
-     *
-     * @param scope The name of the secret scope
-     * @param key The name of the secret to store
-     * @param value The secret value as a byte vector
-     * @throws std::runtime_error if the API request fails
-     *
-     * @note This overload accepts binary/secure values for storing non-text secrets.
-     *       Users should securely zero out the value vector after calling this function.
-     */
-    void put_secret(const std::string& scope, const std::string& key, const std::vector<uint8_t>& value);
-
-    /**
      * @brief Delete a secret from a scope
      *
      * @param scope The name of the secret scope
@@ -148,6 +147,13 @@ public:
 private:
     class Impl;
     std::unique_ptr<Impl> pimpl_;
+
+    std::string secret_permissions_to_string(SecretPermission secret_permission) const;
+    std::string backend_type_to_string(SecretScopeBackendType backend_type) const;
+
+    // Helper methods for parsing API responses
+    static std::vector<SecretScope> parse_scopes_list(const std::string& json_str);
+    static std::vector<Secret> parse_secrets_list(const std::string& json_str);
 };
 
 } // namespace databricks
