@@ -2,17 +2,6 @@
 
 This directory contains tests for the Databricks C++ SDK, organized by test type.
 
-## Structure
-
-```
-tests/
-├── unit/                    # Unit tests (fast, no external dependencies)
-│   └── test_client.cpp      # Client & Config tests (Google Test)
-├── helpers/                 # Test utilities and helpers
-│   └── test_utils.h         # Common test utilities
-└── CMakeLists.txt           # Test configuration
-```
-
 ## Running Tests
 
 ### Build Tests
@@ -173,19 +162,6 @@ EXPECT_THROW({
     compute.create_compute(config);
 }, std::runtime_error);
 ```
-
-### Architecture: Dependency Injection
-
-REST API clients (Compute, Jobs, etc.) support two constructors:
-
-1. **Production**: `Compute(AuthConfig)` - Creates real HttpClient
-2. **Testing**: `Compute(std::shared_ptr<IHttpClient>)` - Accepts mock
-
-This pattern enables:
-- ✅ Fast, deterministic unit tests
-- ✅ Testing without external dependencies
-- ✅ Easy error scenario simulation
-- ✅ Request/response verification
 
 ### Available Assertions
 
