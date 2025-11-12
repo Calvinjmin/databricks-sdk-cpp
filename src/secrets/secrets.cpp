@@ -6,8 +6,9 @@
 #include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
 
-#include <nlohmann/json.hpp>
 #include <unordered_map>
+
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
@@ -50,39 +51,34 @@ std::vector<SecretScope> Secrets::list_scopes() {
     return parse_scopes_list(response.body);
 }
 
-void Secrets::create_scope(SecretPermission secret_permissions,
-    const std::string& scope,
-    SecretScopeBackendType backend_type,
-    const std::optional<std::string>& azure_resource_id,
-    const std::optional<std::string>& azure_tenant_id,
-    const std::optional<std::string>& dns_name) {
-
+void Secrets::create_scope(SecretPermission secret_permissions, const std::string& scope,
+                           SecretScopeBackendType backend_type, const std::optional<std::string>& azure_resource_id,
+                           const std::optional<std::string>& azure_tenant_id,
+                           const std::optional<std::string>& dns_name) {
     // Validate Azure parameters if using Azure Key Vault backend
     if (backend_type == SecretScopeBackendType::AZURE_KEYVAULT) {
-        if (!azure_resource_id.has_value() || azure_resource_id->empty() ||
-            !azure_tenant_id.has_value() || azure_tenant_id->empty() ||
-            !dns_name.has_value() || dns_name->empty()) {
-            throw std::invalid_argument("Azure resource_id, tenant_id, and dns_name are required for AZURE_KEYVAULT backend");
+        if (!azure_resource_id.has_value() || azure_resource_id->empty() || !azure_tenant_id.has_value() ||
+            azure_tenant_id->empty() || !dns_name.has_value() || dns_name->empty()) {
+            throw std::invalid_argument(
+                "Azure resource_id, tenant_id, and dns_name are required for AZURE_KEYVAULT backend");
         }
     }
-    
+
     internal::get_logger()->info("Creating secret scope: " + scope);
-    
+
     // Build JSON Body
     json body_json;
     body_json["scope"] = scope;
     body_json["initial_manage_principal"] = secret_permissions_to_string(secret_permissions);
     body_json["backend_type"] = backend_type_to_string(backend_type);
-    
+
     // Add Azure Key Vault configuration if needed
     if (backend_type == SecretScopeBackendType::AZURE_KEYVAULT) {
-        body_json["backend_azure_keyvault"] = {
-            {"resource_id", azure_resource_id.value()},
-            {"tenant_id", azure_tenant_id.value()},
-            {"dns_name", dns_name.value()}
-        };
+        body_json["backend_azure_keyvault"] = {{"resource_id", azure_resource_id.value()},
+                                               {"tenant_id", azure_tenant_id.value()},
+                                               {"dns_name", dns_name.value()}};
     }
-    
+
     std::string body = body_json.dump();
     internal::get_logger()->debug("Create scope request body: " + body);
 
@@ -246,9 +242,7 @@ std::string Secrets::secret_permissions_to_string(SecretPermission secret_permis
 
 std::string Secrets::backend_type_to_string(SecretScopeBackendType backend_type) const {
     static const std::unordered_map<SecretScopeBackendType, std::string> backend_map = {
-        {SecretScopeBackendType::DATABRICKS, "DATABRICKS"},
-        {SecretScopeBackendType::AZURE_KEYVAULT, "AZURE_KEYVAULT"}
-    };
+        {SecretScopeBackendType::DATABRICKS, "DATABRICKS"}, {SecretScopeBackendType::AZURE_KEYVAULT, "AZURE_KEYVAULT"}};
 
     auto it = backend_map.find(backend_type);
     if (it != backend_map.end()) {

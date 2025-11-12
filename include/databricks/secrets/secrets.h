@@ -5,8 +5,8 @@
 #include "databricks/core/config.h"
 #include "databricks/secrets/secrets_types.h"
 
-#include <vector>
 #include <optional>
+#include <vector>
 
 namespace databricks {
 namespace internal {
@@ -49,7 +49,7 @@ public:
      * @param auth Authentication configuration with host and token
      * @param api_version Secrets API version to use (default: "2.0")
      */
-    explicit Secrets(const AuthConfig& auth, const std::string& api_version="2.0");
+    explicit Secrets(const AuthConfig& auth, const std::string& api_version = "2.0");
 
     /**
      * @brief Construct a Secrets API client with dependency injection (for testing)
@@ -90,12 +90,11 @@ public:
      * @note Databricks-backed scopes are stored in the control plane. Azure Key Vault-backed
      *       scopes are stored in your Azure Key Vault instance.
      */
-    void create_scope(SecretPermission secret_permissions,
-        const std::string& scope, 
-        SecretScopeBackendType backend_type,
-        const std::optional<std::string>& azure_resource_id = std::nullopt,
-        const std::optional<std::string>& azure_tenant_id = std::nullopt,
-        const std::optional<std::string>& dns_name = std::nullopt);
+    void create_scope(SecretPermission secret_permissions, const std::string& scope,
+                      SecretScopeBackendType backend_type,
+                      const std::optional<std::string>& azure_resource_id = std::nullopt,
+                      const std::optional<std::string>& azure_tenant_id = std::nullopt,
+                      const std::optional<std::string>& dns_name = std::nullopt);
 
     /**
      * @brief Delete a secret scope
