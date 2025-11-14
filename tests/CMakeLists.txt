@@ -42,6 +42,11 @@ target_include_directories(unit_tests
         ${CMAKE_CURRENT_SOURCE_DIR}/mocks
 )
 
+# Windows-specific definitions
+if(MSVC)
+    target_compile_definitions(unit_tests PRIVATE NOMINMAX)
+endif()
+
 # Discover and register Google Test cases
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
