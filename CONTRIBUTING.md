@@ -301,11 +301,7 @@ New to the project? Look for issues labeled `good first issue`:
 
 - **Questions**: Open a GitHub Discussion or Issue with `question` label
 - **Bugs**: Open an issue with reproduction steps
-- **Security**: See [SECURITY.md](SECURITY.md) (don't open public issues)
-
-### Code of Conduct
-
-Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) in all interactions.
+- **Security**: For security concerns, please open a private security advisory on GitHub (don't open public issues)
 
 ## 🏆 Recognition
 
