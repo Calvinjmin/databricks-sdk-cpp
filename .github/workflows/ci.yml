@@ -46,7 +46,7 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
-        vcpkg install curl spdlog fmt-devel nlohmann-json
+        vcpkg install curl spdlog fmt nlohmann-json
 
     - name: Configure CMake (Linux/macOS)
       if: runner.os != 'Windows'
