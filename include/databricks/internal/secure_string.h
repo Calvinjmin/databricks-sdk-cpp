@@ -6,12 +6,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
-
-#ifdef _WIN32
-#    include <windows.h>
-#else
-#    include <sys/mman.h>
-#endif
+#include <sys/mman.h>
 
 namespace databricks {
 namespace internal {
@@ -86,26 +81,16 @@ private:
      * @brief Lock memory pages to prevent swapping to disk
      */
     static void lock_memory(void* ptr, size_type size) noexcept {
-#ifdef _WIN32
-        // Use VirtualLock on Windows
-        // Ignore failures - locking is best-effort
-        VirtualLock(ptr, size);
-#else
         // Use mlock on POSIX systems
         // Ignore failures - locking is best-effort
         mlock(ptr, size);
-#endif
     }
 
     /**
      * @brief Unlock memory pages
      */
     static void unlock_memory(void* ptr, size_type size) noexcept {
-#ifdef _WIN32
-        VirtualUnlock(ptr, size);
-#else
         munlock(ptr, size);
-#endif
     }
 
     /**

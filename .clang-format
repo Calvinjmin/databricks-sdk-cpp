@@ -62,15 +62,12 @@ IncludeCategories:
   # Standard library
   - Regex:           '^<[a-z_]+>'
     Priority:        4
-  # Windows headers
-  - Regex:           '^<windows\.h>'
-    Priority:        5
   # ODBC headers
   - Regex:           '^<sql'
-    Priority:        6
+    Priority:        5
   # Third-party libraries
   - Regex:           '.*'
-    Priority:        7
+    Priority:        6
 
 # Other formatting
 BinPackArguments: true

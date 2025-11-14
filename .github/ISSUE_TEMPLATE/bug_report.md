@@ -11,8 +11,8 @@ assignees: ''
 <!-- A clear and concise description of what the bug is -->
 
 ## Environment
-- **OS**: <!-- e.g., macOS 14.0, Ubuntu 22.04, Windows 11 -->
-- **Compiler**: <!-- e.g., GCC 11.2, Clang 14, MSVC 2022 -->
+- **OS**: <!-- e.g., macOS 14.0, Ubuntu 22.04 -->
+- **Compiler**: <!-- e.g., GCC 11.2, Clang 14 -->
 - **SDK Version**: <!-- e.g., 0.3.0 -->
 - **CMake Version**: <!-- e.g., 3.25.0 -->
 - **ODBC Driver**: <!-- e.g., Simba Spark ODBC Driver 2.6.26 -->
