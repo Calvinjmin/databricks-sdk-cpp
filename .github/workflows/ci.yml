@@ -1,4 +1,4 @@
-name: CI PR Protection 
+name: Build & Test 
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+  cross-platform-tests:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -53,7 +53,11 @@ jobs:
       run: |
         mkdir -p build
         cd build
-        cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release ..
+        if [ "$RUNNER_OS" == "macOS" ]; then
+          cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew ..
+        else
+          cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release ..
+        fi
 
     - name: Configure CMake (Windows)
       if: runner.os == 'Windows'
@@ -86,7 +90,7 @@ jobs:
         cd build
         ctest -C Release --output-on-failure --verbose
 
-  coverage:
+  code-coverage:
     runs-on: ubuntu-latest
 
     steps:
@@ -128,8 +132,8 @@ jobs:
     - name: Generate coverage report
       run: |
         cd build
-        lcov --capture --directory . --output-file coverage.info
-        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' --output-file coverage.info
+        lcov --capture --directory . --output-file coverage.info --ignore-errors mismatch --ignore-errors gcov
+        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' --output-file coverage.info --ignore-errors unused
         lcov --list coverage.info
 
     - name: Upload coverage to Codecov
