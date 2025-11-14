@@ -170,11 +170,13 @@ target_include_directories(databricks_sdk
 )
 
 # Link ODBC libraries
-target_link_libraries(databricks_sdk PRIVATE
-    ${ODBC_LIBRARIES}
-    spdlog::spdlog
-    CURL::libcurl
-    nlohmann_json::nlohmann_json
+target_link_libraries(databricks_sdk
+    PRIVATE
+        ${ODBC_LIBRARIES}
+        spdlog::spdlog
+        CURL::libcurl
+    PUBLIC
+        nlohmann_json::nlohmann_json
 )
 
 # Set library properties
