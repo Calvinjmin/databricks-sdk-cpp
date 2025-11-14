@@ -22,6 +22,7 @@ jobs:
           unixodbc-dev \
           libcurl4-openssl-dev \
           libspdlog-dev \
+          libfmt-dev \
           nlohmann-json3-dev
 
     - name: Configure CMake
