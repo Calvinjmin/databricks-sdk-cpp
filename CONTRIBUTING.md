@@ -14,7 +14,7 @@ Thank you for your interest in contributing to the Databricks C++ SDK! This docu
 
 ### Prerequisites
 
-- C++17 compatible compiler (GCC 7+, Clang 5+, MSVC 2017+)
+- C++17 compatible compiler (GCC 7+, Clang 5+)
 - CMake 3.14 or higher
 - ODBC Driver Manager (unixODBC on Linux/macOS)
 - [Simba Spark ODBC Driver](https://www.databricks.com/spark/odbc-drivers-download)
@@ -248,7 +248,7 @@ TEST(ClientTest, QueryWithValidParameters) {
 4. **Style**: Does it follow project conventions?
 5. **Performance**: Any performance implications?
 6. **Security**: Any security concerns?
-7. **Compatibility**: Works on Linux/macOS/Windows?
+7. **Compatibility**: Works on Linux/macOS?
 
 ### Responding to Feedback
 

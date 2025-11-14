@@ -1,0 +1,116 @@
+name: Build & Test 
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  cross-platform-tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          unixodbc-dev \
+          libcurl4-openssl-dev \
+          libspdlog-dev \
+          libfmt-dev \
+          nlohmann-json3-dev \
+          lcov
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install \
+          cmake \
+          unixodbc \
+          curl \
+          spdlog \
+          fmt \
+          nlohmann-json
+
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        if [ "$RUNNER_OS" == "macOS" ]; then
+          cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew ..
+        else
+          cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release ..
+        fi
+
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --parallel $(nproc 2>/dev/null || sysctl -n hw.ncpu)
+
+    - name: Run unit tests
+      run: |
+        cd build
+        ctest --output-on-failure --verbose
+
+  code-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          unixodbc-dev \
+          libcurl4-openssl-dev \
+          libspdlog-dev \
+          libfmt-dev \
+          nlohmann-json3-dev \
+          lcov
+
+    - name: Configure CMake with Coverage
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DBUILD_TESTS=ON \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_CXX_FLAGS="--coverage -g -O0" \
+              -DCMAKE_C_FLAGS="--coverage -g -O0" \
+              ..
+
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --parallel $(nproc)
+
+    - name: Run unit tests
+      run: |
+        cd build
+        ctest --output-on-failure --verbose
+
+    - name: Generate coverage report
+      run: |
+        cd build
+        lcov --capture --directory . --output-file coverage.info --ignore-errors mismatch --ignore-errors gcov
+        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' --output-file coverage.info --ignore-errors unused
+        lcov --list coverage.info
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./build/coverage.info
+        fail_ci_if_error: false
+        verbose: true

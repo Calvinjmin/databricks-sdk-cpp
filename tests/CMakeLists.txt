@@ -8,7 +8,6 @@ FetchContent_Declare(
     GIT_TAG v1.14.0
 )
 
-# For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
@@ -20,12 +19,20 @@ enable_testing()
 file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "unit/**/*.cpp")
 add_executable(unit_tests ${UNIT_TEST_SOURCES})
 
+# Find fmt package (spdlog dependency)
+find_package(fmt QUIET)
+
 target_link_libraries(unit_tests
     PRIVATE
         databricks_sdk
         GTest::gtest_main
         GTest::gmock_main
 )
+
+# Link fmt if found (needed on some systems where spdlog uses external fmt)
+if(fmt_FOUND)
+    target_link_libraries(unit_tests PRIVATE fmt::fmt)
+endif()
 
 target_include_directories(unit_tests
     PRIVATE

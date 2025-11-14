@@ -44,10 +44,7 @@ option(BUILD_TESTS "Build tests" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 # Platform-specific configuration
-if(WIN32)
-    # Windows uses odbc32
-    set(ODBC_LIBRARIES odbc32)
-elseif(APPLE)
+if(APPLE)
     # macOS: Prefer Homebrew paths on Apple Silicon
     if(NOT CMAKE_PREFIX_PATH AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
         list(PREPEND CMAKE_PREFIX_PATH "/opt/homebrew")
@@ -170,11 +167,13 @@ target_include_directories(databricks_sdk
 )
 
 # Link ODBC libraries
-target_link_libraries(databricks_sdk PRIVATE
-    ${ODBC_LIBRARIES}
-    spdlog::spdlog
-    CURL::libcurl
-    nlohmann_json::nlohmann_json
+target_link_libraries(databricks_sdk
+    PRIVATE
+        ${ODBC_LIBRARIES}
+        spdlog::spdlog
+        CURL::libcurl
+    PUBLIC
+        nlohmann_json::nlohmann_json
 )
 
 # Set library properties
@@ -183,22 +182,15 @@ set_target_properties(databricks_sdk PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-# Set RPATH for finding ODBC libraries at runtime (Unix/Linux/macOS only)
-if(NOT WIN32)
-    # Use RPATH to find shared libraries relative to executable
-    set_target_properties(databricks_sdk PROPERTIES
-        BUILD_RPATH "${ODBC_LIBRARY_DIR};/usr/local/lib;/opt/homebrew/lib;/opt/local/lib"
-        INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;/usr/local/lib;/opt/homebrew/lib;/opt/local/lib"
-        INSTALL_RPATH_USE_LINK_PATH TRUE
-    )
-endif()
+# Set RPATH for finding ODBC libraries at runtime
+set_target_properties(databricks_sdk PROPERTIES
+    BUILD_RPATH "${ODBC_LIBRARY_DIR};/usr/local/lib;/opt/homebrew/lib;/opt/local/lib"
+    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;/usr/local/lib;/opt/homebrew/lib;/opt/local/lib"
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+)
 
 # Compiler warnings
-if(MSVC)
-    target_compile_options(databricks_sdk PRIVATE /W4)
-else()
-    target_compile_options(databricks_sdk PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+target_compile_options(databricks_sdk PRIVATE -Wall -Wextra -Wpedantic)
 
 # Examples
 if(BUILD_EXAMPLES)
