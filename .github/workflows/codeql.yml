@@ -1,0 +1,56 @@
+name: CodeQL Security Scan
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  schedule:
+    # Run every Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze C++
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          unixodbc-dev \
+          libcurl4-openssl-dev \
+          libspdlog-dev \
+          libfmt-dev \
+          nlohmann-json3-dev
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: cpp
+        queries: security-extended
+
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug ..
+
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --parallel $(nproc)
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:cpp"
