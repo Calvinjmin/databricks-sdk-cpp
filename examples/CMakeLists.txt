@@ -24,7 +24,12 @@ target_link_libraries(secrets_example PRIVATE databricks_sdk)
 if(MSVC)
     set(ALL_EXAMPLES simple_query jobs_example compute_example unity_catalog_example secrets_example)
     foreach(example ${ALL_EXAMPLES})
-        target_compile_definitions(${example} PRIVATE NOMINMAX)
+        target_compile_definitions(${example}
+            PRIVATE
+                NOMINMAX            # Prevent min/max macros
+                NOGDI               # Prevent GDI macros (including ERROR)
+                WIN32_LEAN_AND_MEAN # Reduce Windows header bloat
+        )
     endforeach()
 endif()
 

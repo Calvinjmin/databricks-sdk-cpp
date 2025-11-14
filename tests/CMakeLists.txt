@@ -44,7 +44,12 @@ target_include_directories(unit_tests
 
 # Windows-specific definitions
 if(MSVC)
-    target_compile_definitions(unit_tests PRIVATE NOMINMAX)
+    target_compile_definitions(unit_tests
+        PRIVATE
+            NOMINMAX            # Prevent min/max macros
+            NOGDI               # Prevent GDI macros (including ERROR)
+            WIN32_LEAN_AND_MEAN # Reduce Windows header bloat
+    )
 endif()
 
 # Discover and register Google Test cases

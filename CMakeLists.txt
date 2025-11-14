@@ -198,7 +198,12 @@ endif()
 # Compiler warnings and definitions
 if(MSVC)
     target_compile_options(databricks_sdk PRIVATE /W4)
-    target_compile_definitions(databricks_sdk PRIVATE NOMINMAX)
+    target_compile_definitions(databricks_sdk
+        PRIVATE
+            NOMINMAX            # Prevent min/max macros
+            NOGDI               # Prevent GDI macros (including ERROR)
+            WIN32_LEAN_AND_MEAN # Reduce Windows header bloat
+    )
 else()
     target_compile_options(databricks_sdk PRIVATE -Wall -Wextra -Wpedantic)
 endif()
