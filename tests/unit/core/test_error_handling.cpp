@@ -3,6 +3,7 @@
 #include "databricks/core/config.h"
 
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 
 #include <gmock/gmock.h>
@@ -96,7 +97,7 @@ TEST_F(AuthConfigErrorTest, SuccessfulProfileLoading) {
     setenv("HOME", home, 1);
 
     // Create the directory if it doesn't exist
-    system(("mkdir -p " + std::string(home)).c_str());
+    std::filesystem::create_directories(home);
 
     // Create the config file
     std::string config_path = std::string(home) + "/.databrickscfg";
@@ -151,7 +152,7 @@ TEST_F(AuthConfigErrorTest, ProfileMissingFields) {
     setenv("HOME", home, 1);
 
     // Create the directory if it doesn't exist
-    system(("mkdir -p " + std::string(home)).c_str());
+    std::filesystem::create_directories(home);
 
     // Create config file with only host (missing token)
     std::string config_path = std::string(home) + "/.databrickscfg";

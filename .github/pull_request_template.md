@@ -20,6 +20,7 @@ Closes #
 - [ ] Added/updated tests
 - [ ] All tests pass (`make test`)
 - [ ] Tested manually
+- [ ] Build and test workflow is successful
 
 ## Checklist
 - [ ] Code follows style guidelines (`make format`)
