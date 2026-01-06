@@ -5,6 +5,7 @@
 #include "../internal/http_client.h"
 #include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
+#include "../internal/url_utils.h"
 
 #include <sstream>
 #include <stdexcept>
@@ -52,8 +53,8 @@ std::vector<ObjectInfo> Workspace::list(const std::string& path,
         throw std::invalid_argument("Path cannot be empty");
     }
 
-    // Build query parameters
-    std::string query_params = "?path=" + path;
+    // Build query parameters with URL encoding
+    std::string query_params = "?path=" + internal::url_encode(path);
     if (notebooks_modified_after.has_value()) {
         query_params += "&notebooks_modified_after=" + std::to_string(notebooks_modified_after.value());
     }
@@ -94,8 +95,8 @@ ObjectInfo Workspace::get_status(const std::string& path) {
         throw std::invalid_argument("Path cannot be empty");
     }
 
-    // Build query parameters
-    std::string query_params = "?path=" + path;
+    // Build query parameters with URL encoding
+    std::string query_params = "?path=" + internal::url_encode(path);
 
     auto response = pimpl_->http_client_->get("/workspace/get-status" + query_params);
     pimpl_->http_client_->check_response(response, "getStatus");
@@ -112,8 +113,8 @@ ExportResponse Workspace::export_file(const std::string& path, ExportFormat form
         throw std::invalid_argument("Path cannot be empty");
     }
 
-    // Build query parameters
-    std::string query_params = "?path=" + path;
+    // Build query parameters with URL encoding
+    std::string query_params = "?path=" + internal::url_encode(path);
     query_params += "&format=" + export_format_to_string(format);
 
     internal::get_logger()->debug("Export request for path=" + path + ", format=" + export_format_to_string(format));

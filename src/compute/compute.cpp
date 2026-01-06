@@ -5,6 +5,7 @@
 #include "../internal/http_client.h"
 #include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
+#include "../internal/url_utils.h"
 
 #include <nlohmann/json.hpp>
 
@@ -73,8 +74,11 @@ bool Compute::create_compute(const Cluster& cluster_config) {
 Cluster Compute::get_compute(const std::string& cluster_id) {
     internal::get_logger()->info("Getting compute cluster details for cluster_id=" + cluster_id);
 
+    // URL-encode the cluster_id to prevent injection
+    std::string encoded_id = internal::url_encode(cluster_id);
+
     // Make API request with cluster_id as query parameter
-    auto response = pimpl_->http_client_->get("/clusters/get?cluster_id=" + cluster_id);
+    auto response = pimpl_->http_client_->get("/clusters/get?cluster_id=" + encoded_id);
     pimpl_->http_client_->check_response(response, "getCompute");
 
     internal::get_logger()->debug("Compute cluster details response: " + response.body);

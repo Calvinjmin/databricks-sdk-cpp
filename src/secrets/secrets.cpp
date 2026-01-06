@@ -5,6 +5,7 @@
 #include "../internal/http_client.h"
 #include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
+#include "../internal/url_utils.h"
 
 #include <unordered_map>
 
@@ -144,8 +145,8 @@ void Secrets::delete_secret(const std::string& scope, const std::string& key) {
 std::vector<Secret> Secrets::list_secrets(const std::string& scope) {
     internal::get_logger()->info("Listing secrets in scope: " + scope);
 
-    // Make GET request with scope as query parameter
-    auto response = pimpl_->http_client_->get("/secrets/list?scope=" + scope);
+    // Make GET request with scope as query parameter (URL-encoded)
+    auto response = pimpl_->http_client_->get("/secrets/list?scope=" + internal::url_encode(scope));
     pimpl_->http_client_->check_response(response, "listSecrets");
 
     internal::get_logger()->debug("Successfully retrieved secrets list");

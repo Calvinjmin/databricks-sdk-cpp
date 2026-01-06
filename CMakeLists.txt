@@ -128,6 +128,7 @@ set(SOURCES
     src/internal/pool_manager.cpp
     src/internal/logger.cpp
     src/internal/http_client.cpp
+    src/internal/url_utils.cpp
 )
 
 set(HEADERS
@@ -152,6 +153,7 @@ set(INTERNAL_HEADERS
     src/internal/pool_manager.h
     src/internal/logger.h
     src/internal/http_client.h
+    src/internal/url_utils.h
 )
 
 # Create library target
