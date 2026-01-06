@@ -88,7 +88,7 @@ TEST_F(WorkspaceApiTest, ListWorkspaceObjectsSuccess) {
         ]
     })";
 
-    EXPECT_CALL(*mock_client_, get("/workspace/list?path=/test/path"))
+    EXPECT_CALL(*mock_client_, get("/workspace/list?path=%2Ftest%2Fpath"))
         .WillOnce(Return(MockHttpClient::success_response(mock_list_response)));
 
     databricks::Workspace workspace(mock_client_);
@@ -119,7 +119,7 @@ TEST_F(WorkspaceApiTest, ListEmptyWorkspaceObjectsSuccess) {
         "objects": []
     })";
 
-    EXPECT_CALL(*mock_client_, get("/workspace/list?path=/test/path"))
+    EXPECT_CALL(*mock_client_, get("/workspace/list?path=%2Ftest%2Fpath"))
         .WillOnce(Return(MockHttpClient::success_response(mock_empty_list_response)));
      
     databricks::Workspace workspace(mock_client_);
@@ -168,7 +168,7 @@ TEST_F(WorkspaceApiTest, GetStatusSuccess) {
         "modified_at": 1609545600000
     })";
 
-    EXPECT_CALL(*mock_client_, get("/workspace/get-status?path=/test/notebook"))
+    EXPECT_CALL(*mock_client_, get("/workspace/get-status?path=%2Ftest%2Fnotebook"))
         .WillOnce(Return(MockHttpClient::success_response(mock_status_response)));
 
     databricks::Workspace workspace(mock_client_);
