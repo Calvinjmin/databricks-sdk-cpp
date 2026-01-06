@@ -47,6 +47,11 @@ std::vector<ObjectInfo> Workspace::list(const std::string& path,
                                          const std::optional<uint64_t>& notebooks_modified_after) {
     internal::get_logger()->info("Listing workspace objects at path: " + path);
 
+    // Throw exception if path is empty
+    if (path.length() == 0) {
+        throw std::invalid_argument("Path cannot be empty");
+    }
+
     // Build query parameters
     std::string query_params = "?path=" + path;
     if (notebooks_modified_after.has_value()) {
@@ -62,6 +67,11 @@ std::vector<ObjectInfo> Workspace::list(const std::string& path,
 
 void Workspace::mkdirs(const std::string& path) {
     internal::get_logger()->info("Creating workspace directory: " + path);
+
+    // Throw exception if path is empty
+    if (path.length() == 0) {
+        throw std::invalid_argument("Path cannot be empty");
+    }
 
     // Build JSON body
     json body_json;
@@ -79,6 +89,11 @@ void Workspace::mkdirs(const std::string& path) {
 ObjectInfo Workspace::get_status(const std::string& path) {
     internal::get_logger()->info("Getting status for workspace object: " + path);
 
+    // Throw exception if path is empty
+    if (path.length() == 0) {
+        throw std::invalid_argument("Path cannot be empty");
+    }
+
     // Build query parameters
     std::string query_params = "?path=" + path;
 
@@ -91,6 +106,11 @@ ObjectInfo Workspace::get_status(const std::string& path) {
 
 ExportResponse Workspace::export_file(const std::string& path, ExportFormat format) {
     internal::get_logger()->info("Exporting workspace object: " + path);
+
+    // Throw exception if path is empty
+    if (path.length() == 0) {
+        throw std::invalid_argument("Path cannot be empty");
+    }
 
     // Build query parameters
     std::string query_params = "?path=" + path;
@@ -111,6 +131,11 @@ void Workspace::import_file(const std::string& path,
                              const std::optional<Language>& language,
                              bool overwrite) {
     internal::get_logger()->info("Importing workspace object to path: " + path);
+
+    // Throw exception for invalid arguments
+    if (path.length() == 0 || content.length() == 0 ) {
+        throw std::invalid_argument("Path or Content Input cannot be empty");
+    }
 
     // Build JSON body
     json body_json;
@@ -144,6 +169,11 @@ void Workspace::import_file(const ImportRequest& request) {
 
 void Workspace::delete_object(const std::string& path, bool recursive) {
     internal::get_logger()->info("Deleting workspace object: " + path + " (recursive=" + (recursive ? "true" : "false") + ")");
+
+    // Throw exception if path is empty
+    if (path.length() == 0) {
+        throw std::invalid_argument("Path cannot be empty");
+    }
 
     // Build JSON body
     json body_json;

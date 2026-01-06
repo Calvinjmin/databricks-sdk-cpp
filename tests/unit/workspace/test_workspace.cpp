@@ -9,6 +9,7 @@
 using databricks::test::MockHttpClient;
 using ::testing::_;
 using ::testing::HasSubstr;
+using ::testing::Eq;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::Throw;
@@ -67,7 +68,7 @@ TEST_F(WorkspaceTest, MultipleValidWorkspaceClient) {
 // ============================================================================
 
 // Test: List Workspace Objects
-TEST_F(WorkspaceApiTest, SuccessfulListWorkspaceObjects) {
+TEST_F(WorkspaceApiTest, ListWorkspaceObjectsSuccess) {
     std::string mock_list_response = R"({
         "objects": [
             {
@@ -112,7 +113,8 @@ TEST_F(WorkspaceApiTest, SuccessfulListWorkspaceObjects) {
     EXPECT_EQ(response[1].object_id, 67890);
 }
 
-TEST_F(WorkspaceApiTest, SuccessfulListEmptyWorkspaceObjects) {
+// Test: List Empty Workspace Objects
+TEST_F(WorkspaceApiTest, ListEmptyWorkspaceObjectsSuccess) {
     const std::string& mock_empty_list_response = R"({
         "objects": []
     })";
@@ -126,4 +128,65 @@ TEST_F(WorkspaceApiTest, SuccessfulListEmptyWorkspaceObjects) {
 
     // Verify we got 0 objects back
     ASSERT_EQ(response.size(), 0);
+}
+
+// Test: Fail to list Workspace Objects with an empty path
+TEST_F(WorkspaceApiTest, ListWorkspaceObjectThrowsInvalidArgument) {
+    databricks::Workspace workspace(mock_client_);
+    const std::string& empty_path = "";
+
+    EXPECT_THROW(workspace.list(empty_path), std::invalid_argument);
+}
+
+// Test: Create a Mock Directory
+TEST_F(WorkspaceApiTest, CreateDirectorySuccess) {
+    EXPECT_CALL(*mock_client_, post("/workspace/mkdirs", Eq(R"({"path":"/test/path"})")))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/path";
+    workspace.mkdirs(mock_path);
+}
+
+// Test: Fail to create an empty Mock Directory
+TEST_F(WorkspaceApiTest, CreateEmptyDirectoryThrowsInvalidArgument) {
+    databricks::Workspace workspace(mock_client_);
+    const std::string& empty_path = "";
+
+    EXPECT_THROW(workspace.mkdirs(empty_path), std::invalid_argument);
+}
+
+// Test: Get Status for a Workspace object
+TEST_F(WorkspaceApiTest, GetStatusSuccess) {
+    std::string mock_status_response = R"({
+        "path": "/test/notebook",
+        "object_type": "NOTEBOOK",
+        "object_id": 12345,
+        "language": "PYTHON",
+        "size": 2048,
+        "created_at": 1609459200000,
+        "modified_at": 1609545600000
+    })";
+
+    EXPECT_CALL(*mock_client_, get("/workspace/get-status?path=/test/notebook"))
+        .WillOnce(Return(MockHttpClient::success_response(mock_status_response)));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    auto response = workspace.get_status(mock_path);
+
+    // Verify object status
+    EXPECT_EQ(response.path, "/test/notebook");
+    EXPECT_EQ(response.object_type, databricks::ObjectType::NOTEBOOK);
+    EXPECT_EQ(response.object_id, 12345);
+    EXPECT_EQ(response.language, databricks::Language::PYTHON);
+    EXPECT_EQ(response.size, 2048);
+}
+
+// Test: Fail to get status for an empty path Workspace object
+TEST_F(WorkspaceApiTest, GetStatusThrowsInvalidArgument) {
+    databricks::Workspace workspace(mock_client_);
+    const std::string& empty_path = "";
+
+    EXPECT_THROW(workspace.get_status(empty_path), std::invalid_argument);
 }
