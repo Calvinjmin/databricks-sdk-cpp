@@ -124,6 +124,7 @@ set(SOURCES
     src/unity_catalog/unity_catalog_types.cpp
     src/unity_catalog/unity_catalog.cpp
     src/secrets/secrets.cpp
+    src/workspace/workspace.cpp
     src/internal/pool_manager.cpp
     src/internal/logger.cpp
     src/internal/http_client.cpp
@@ -142,6 +143,8 @@ set(HEADERS
     include/databricks/unity_catalog/unity_catalog_types.h
     include/databricks/secrets/secrets.h
     include/databricks/secrets/secrets_types.h
+    include/databricks/workspace/workspace.h
+    include/databricks/workspace/workspace_types.h
 )
 
 # Internal headers (not installed)
