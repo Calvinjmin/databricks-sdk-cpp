@@ -45,7 +45,7 @@ Workspace::~Workspace() = default;
 // ==================== PUBLIC API METHODS ====================
 
 std::vector<ObjectInfo> Workspace::list(const std::string& path,
-                                         const std::optional<uint64_t>& notebooks_modified_after) {
+                                        const std::optional<uint64_t>& notebooks_modified_after) {
     internal::get_logger()->info("Listing workspace objects at path: " + path);
 
     // Throw exception if path is empty
@@ -126,15 +126,12 @@ ExportResponse Workspace::export_file(const std::string& path, ExportFormat form
     return ExportResponse::from_json(response.body);
 }
 
-void Workspace::import_file(const std::string& path,
-                             const std::string& content,
-                             ImportFormat format,
-                             const std::optional<Language>& language,
-                             bool overwrite) {
+void Workspace::import_file(const std::string& path, const std::string& content, ImportFormat format,
+                            const std::optional<Language>& language, bool overwrite) {
     internal::get_logger()->info("Importing workspace object to path: " + path);
 
     // Throw exception for invalid arguments
-    if (path.length() == 0 || content.length() == 0 ) {
+    if (path.length() == 0 || content.length() == 0) {
         throw std::invalid_argument("Path or Content Input cannot be empty");
     }
 
@@ -169,7 +166,8 @@ void Workspace::import_file(const ImportRequest& request) {
 }
 
 void Workspace::delete_object(const std::string& path, bool recursive) {
-    internal::get_logger()->info("Deleting workspace object: " + path + " (recursive=" + (recursive ? "true" : "false") + ")");
+    internal::get_logger()->info("Deleting workspace object: " + path +
+                                 " (recursive=" + (recursive ? "true" : "false") + ")");
 
     // Throw exception if path is empty
     if (path.length() == 0) {
@@ -193,13 +191,11 @@ void Workspace::delete_object(const std::string& path, bool recursive) {
 // ==================== ENUM CONVERSION HELPERS ====================
 
 std::string Workspace::object_type_to_string(ObjectType type) const {
-    static const std::unordered_map<ObjectType, std::string> type_map = {
-        {ObjectType::NOTEBOOK, "NOTEBOOK"},
-        {ObjectType::DIRECTORY, "DIRECTORY"},
-        {ObjectType::LIBRARY, "LIBRARY"},
-        {ObjectType::FILE, "FILE"},
-        {ObjectType::REPO, "REPO"}
-    };
+    static const std::unordered_map<ObjectType, std::string> type_map = {{ObjectType::NOTEBOOK, "NOTEBOOK"},
+                                                                         {ObjectType::DIRECTORY, "DIRECTORY"},
+                                                                         {ObjectType::LIBRARY, "LIBRARY"},
+                                                                         {ObjectType::FILE, "FILE"},
+                                                                         {ObjectType::REPO, "REPO"}};
 
     auto it = type_map.find(type);
     if (it != type_map.end()) {
@@ -209,13 +205,11 @@ std::string Workspace::object_type_to_string(ObjectType type) const {
 }
 
 ObjectType Workspace::string_to_object_type(const std::string& str) {
-    static const std::unordered_map<std::string, ObjectType> type_map = {
-        {"NOTEBOOK", ObjectType::NOTEBOOK},
-        {"DIRECTORY", ObjectType::DIRECTORY},
-        {"LIBRARY", ObjectType::LIBRARY},
-        {"FILE", ObjectType::FILE},
-        {"REPO", ObjectType::REPO}
-    };
+    static const std::unordered_map<std::string, ObjectType> type_map = {{"NOTEBOOK", ObjectType::NOTEBOOK},
+                                                                         {"DIRECTORY", ObjectType::DIRECTORY},
+                                                                         {"LIBRARY", ObjectType::LIBRARY},
+                                                                         {"FILE", ObjectType::FILE},
+                                                                         {"REPO", ObjectType::REPO}};
 
     auto it = type_map.find(str);
     if (it != type_map.end()) {
@@ -226,13 +220,9 @@ ObjectType Workspace::string_to_object_type(const std::string& str) {
 
 std::string Workspace::export_format_to_string(ExportFormat format) const {
     static const std::unordered_map<ExportFormat, std::string> format_map = {
-        {ExportFormat::SOURCE, "SOURCE"},
-        {ExportFormat::HTML, "HTML"},
-        {ExportFormat::JUPYTER, "JUPYTER"},
-        {ExportFormat::DBC, "DBC"},
-        {ExportFormat::R_MARKDOWN, "R_MARKDOWN"},
-        {ExportFormat::AUTO, "AUTO"}
-    };
+        {ExportFormat::SOURCE, "SOURCE"},         {ExportFormat::HTML, "HTML"},
+        {ExportFormat::JUPYTER, "JUPYTER"},       {ExportFormat::DBC, "DBC"},
+        {ExportFormat::R_MARKDOWN, "R_MARKDOWN"}, {ExportFormat::AUTO, "AUTO"}};
 
     auto it = format_map.find(format);
     if (it != format_map.end()) {
@@ -243,13 +233,9 @@ std::string Workspace::export_format_to_string(ExportFormat format) const {
 
 ExportFormat Workspace::string_to_export_format(const std::string& str) {
     static const std::unordered_map<std::string, ExportFormat> format_map = {
-        {"SOURCE", ExportFormat::SOURCE},
-        {"HTML", ExportFormat::HTML},
-        {"JUPYTER", ExportFormat::JUPYTER},
-        {"DBC", ExportFormat::DBC},
-        {"R_MARKDOWN", ExportFormat::R_MARKDOWN},
-        {"AUTO", ExportFormat::AUTO}
-    };
+        {"SOURCE", ExportFormat::SOURCE},         {"HTML", ExportFormat::HTML},
+        {"JUPYTER", ExportFormat::JUPYTER},       {"DBC", ExportFormat::DBC},
+        {"R_MARKDOWN", ExportFormat::R_MARKDOWN}, {"AUTO", ExportFormat::AUTO}};
 
     auto it = format_map.find(str);
     if (it != format_map.end()) {
@@ -260,13 +246,9 @@ ExportFormat Workspace::string_to_export_format(const std::string& str) {
 
 std::string Workspace::import_format_to_string(ImportFormat format) const {
     static const std::unordered_map<ImportFormat, std::string> format_map = {
-        {ImportFormat::SOURCE, "SOURCE"},
-        {ImportFormat::HTML, "HTML"},
-        {ImportFormat::JUPYTER, "JUPYTER"},
-        {ImportFormat::DBC, "DBC"},
-        {ImportFormat::R_MARKDOWN, "R_MARKDOWN"},
-        {ImportFormat::AUTO, "AUTO"}
-    };
+        {ImportFormat::SOURCE, "SOURCE"},         {ImportFormat::HTML, "HTML"},
+        {ImportFormat::JUPYTER, "JUPYTER"},       {ImportFormat::DBC, "DBC"},
+        {ImportFormat::R_MARKDOWN, "R_MARKDOWN"}, {ImportFormat::AUTO, "AUTO"}};
 
     auto it = format_map.find(format);
     if (it != format_map.end()) {
@@ -277,13 +259,9 @@ std::string Workspace::import_format_to_string(ImportFormat format) const {
 
 ImportFormat Workspace::string_to_import_format(const std::string& str) {
     static const std::unordered_map<std::string, ImportFormat> format_map = {
-        {"SOURCE", ImportFormat::SOURCE},
-        {"HTML", ImportFormat::HTML},
-        {"JUPYTER", ImportFormat::JUPYTER},
-        {"DBC", ImportFormat::DBC},
-        {"R_MARKDOWN", ImportFormat::R_MARKDOWN},
-        {"AUTO", ImportFormat::AUTO}
-    };
+        {"SOURCE", ImportFormat::SOURCE},         {"HTML", ImportFormat::HTML},
+        {"JUPYTER", ImportFormat::JUPYTER},       {"DBC", ImportFormat::DBC},
+        {"R_MARKDOWN", ImportFormat::R_MARKDOWN}, {"AUTO", ImportFormat::AUTO}};
 
     auto it = format_map.find(str);
     if (it != format_map.end()) {
@@ -294,11 +272,7 @@ ImportFormat Workspace::string_to_import_format(const std::string& str) {
 
 std::string Workspace::language_to_string(Language language) const {
     static const std::unordered_map<Language, std::string> lang_map = {
-        {Language::SCALA, "SCALA"},
-        {Language::PYTHON, "PYTHON"},
-        {Language::SQL, "SQL"},
-        {Language::R, "R"}
-    };
+        {Language::SCALA, "SCALA"}, {Language::PYTHON, "PYTHON"}, {Language::SQL, "SQL"}, {Language::R, "R"}};
 
     auto it = lang_map.find(language);
     if (it != lang_map.end()) {
@@ -309,11 +283,7 @@ std::string Workspace::language_to_string(Language language) const {
 
 Language Workspace::string_to_language(const std::string& str) {
     static const std::unordered_map<std::string, Language> lang_map = {
-        {"SCALA", Language::SCALA},
-        {"PYTHON", Language::PYTHON},
-        {"SQL", Language::SQL},
-        {"R", Language::R}
-    };
+        {"SCALA", Language::SCALA}, {"PYTHON", Language::PYTHON}, {"SQL", Language::SQL}, {"R", Language::R}};
 
     auto it = lang_map.find(str);
     if (it != lang_map.end()) {

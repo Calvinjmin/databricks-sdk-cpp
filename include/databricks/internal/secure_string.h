@@ -6,6 +6,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+
 #include <sys/mman.h>
 
 namespace databricks {
@@ -89,9 +90,7 @@ private:
     /**
      * @brief Unlock memory pages
      */
-    static void unlock_memory(void* ptr, size_type size) noexcept {
-        munlock(ptr, size);
-    }
+    static void unlock_memory(void* ptr, size_type size) noexcept { munlock(ptr, size); }
 
     /**
      * @brief Securely zero memory using volatile writes

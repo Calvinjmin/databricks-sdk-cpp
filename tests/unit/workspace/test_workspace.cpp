@@ -8,8 +8,8 @@
 
 using databricks::test::MockHttpClient;
 using ::testing::_;
-using ::testing::HasSubstr;
 using ::testing::Eq;
+using ::testing::HasSubstr;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::Throw;
@@ -42,14 +42,12 @@ protected:
 // Constructor Tests
 // ============================================================================
 TEST_F(WorkspaceTest, ConstructorCreatesValidClient) {
-    ASSERT_NO_THROW({databricks::Workspace workspace(auth);});
+    ASSERT_NO_THROW({ databricks::Workspace workspace(auth); });
 }
 
 TEST_F(WorkspaceTest, ConstructorCreatesValidClientWithManualApiVersion) {
     const std::string& api_version = "1.0";
-    ASSERT_NO_THROW({
-        databricks::Workspace workspace(auth, api_version);
-    });
+    ASSERT_NO_THROW({ databricks::Workspace workspace(auth, api_version); });
 }
 
 TEST_F(WorkspaceTest, MultipleValidWorkspaceClient) {
@@ -121,7 +119,7 @@ TEST_F(WorkspaceApiTest, ListEmptyWorkspaceObjectsSuccess) {
 
     EXPECT_CALL(*mock_client_, get("/workspace/list?path=%2Ftest%2Fpath"))
         .WillOnce(Return(MockHttpClient::success_response(mock_empty_list_response)));
-     
+
     databricks::Workspace workspace(mock_client_);
     const std::string& mock_path = "/test/path";
     auto response = workspace.list(mock_path);

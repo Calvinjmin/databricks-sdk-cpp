@@ -17,17 +17,16 @@
 #include "databricks/workspace/workspace.h"
 
 #include <exception>
+#include <iomanip>
 #include <iostream>
 #include <optional>
 #include <sstream>
-#include <iomanip>
 
 // Helper function to encode string to base64
 std::string base64_encode(const std::string& input) {
-    static const char* base64_chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
+    static const char* base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                      "abcdefghijklmnopqrstuvwxyz"
+                                      "0123456789+/";
 
     std::string encoded;
     int val = 0;
@@ -56,23 +55,34 @@ std::string base64_encode(const std::string& input) {
 // Helper function to print ObjectType
 std::string object_type_to_string(databricks::ObjectType type) {
     switch (type) {
-        case databricks::ObjectType::NOTEBOOK: return "NOTEBOOK";
-        case databricks::ObjectType::DIRECTORY: return "DIRECTORY";
-        case databricks::ObjectType::LIBRARY: return "LIBRARY";
-        case databricks::ObjectType::FILE: return "FILE";
-        case databricks::ObjectType::REPO: return "REPO";
-        default: return "UNKNOWN";
+    case databricks::ObjectType::NOTEBOOK:
+        return "NOTEBOOK";
+    case databricks::ObjectType::DIRECTORY:
+        return "DIRECTORY";
+    case databricks::ObjectType::LIBRARY:
+        return "LIBRARY";
+    case databricks::ObjectType::FILE:
+        return "FILE";
+    case databricks::ObjectType::REPO:
+        return "REPO";
+    default:
+        return "UNKNOWN";
     }
 }
 
 // Helper function to print Language
 std::string language_to_string(databricks::Language lang) {
     switch (lang) {
-        case databricks::Language::PYTHON: return "PYTHON";
-        case databricks::Language::SCALA: return "SCALA";
-        case databricks::Language::SQL: return "SQL";
-        case databricks::Language::R: return "R";
-        default: return "UNKNOWN";
+    case databricks::Language::PYTHON:
+        return "PYTHON";
+    case databricks::Language::SCALA:
+        return "SCALA";
+    case databricks::Language::SQL:
+        return "SQL";
+    case databricks::Language::R:
+        return "R";
+    default:
+        return "UNKNOWN";
     }
 }
 
@@ -165,23 +175,22 @@ int main() {
         std::cout << "--------------------------------" << std::endl;
 
         // Create a simple Python notebook content
-        std::string notebook_content =
-            "# Databricks notebook source\n"
-            "# MAGIC %md\n"
-            "# MAGIC # Example Notebook\n"
-            "# MAGIC This notebook was created using the Databricks C++ SDK\n"
-            "\n"
-            "# COMMAND ----------\n"
-            "\n"
-            "print(\"Hello from Databricks C++ SDK!\")\n"
-            "\n"
-            "# COMMAND ----------\n"
-            "\n"
-            "# Sample data processing\n"
-            "data = [1, 2, 3, 4, 5]\n"
-            "squared = [x**2 for x in data]\n"
-            "print(f\"Original: {data}\")\n"
-            "print(f\"Squared:  {squared}\")\n";
+        std::string notebook_content = "# Databricks notebook source\n"
+                                       "# MAGIC %md\n"
+                                       "# MAGIC # Example Notebook\n"
+                                       "# MAGIC This notebook was created using the Databricks C++ SDK\n"
+                                       "\n"
+                                       "# COMMAND ----------\n"
+                                       "\n"
+                                       "print(\"Hello from Databricks C++ SDK!\")\n"
+                                       "\n"
+                                       "# COMMAND ----------\n"
+                                       "\n"
+                                       "# Sample data processing\n"
+                                       "data = [1, 2, 3, 4, 5]\n"
+                                       "squared = [x**2 for x in data]\n"
+                                       "print(f\"Original: {data}\")\n"
+                                       "print(f\"Squared:  {squared}\")\n";
 
         // Base64 encode the content
         std::string encoded_content = base64_encode(notebook_content);
@@ -189,12 +198,9 @@ int main() {
         std::string notebook_path = example_dir + "/example_notebook";
         std::cout << "Importing notebook to: " << notebook_path << std::endl;
 
-        workspace.import_file(
-            notebook_path,
-            encoded_content,
-            databricks::ImportFormat::SOURCE,
-            std::optional<databricks::Language>(databricks::Language::PYTHON),
-            true  // overwrite if exists
+        workspace.import_file(notebook_path, encoded_content, databricks::ImportFormat::SOURCE,
+                              std::optional<databricks::Language>(databricks::Language::PYTHON),
+                              true // overwrite if exists
         );
 
         std::cout << "Notebook imported successfully!\n" << std::endl;
@@ -205,10 +211,7 @@ int main() {
         std::cout << "\n5. Exporting the notebook:" << std::endl;
         std::cout << "--------------------------" << std::endl;
 
-        auto export_response = workspace.export_file(
-            notebook_path,
-            databricks::ExportFormat::SOURCE
-        );
+        auto export_response = workspace.export_file(notebook_path, databricks::ExportFormat::SOURCE);
 
         std::cout << "  Notebook exported successfully!" << std::endl;
         std::cout << "  File type:     " << export_response.file_type << std::endl;
@@ -244,7 +247,7 @@ int main() {
         std::cout << "Notebook deleted successfully!" << std::endl;
 
         std::cout << "Deleting directory: " << example_dir << std::endl;
-        workspace.delete_object(example_dir, true);  // recursive delete
+        workspace.delete_object(example_dir, true); // recursive delete
         std::cout << "Directory deleted successfully!\n" << std::endl;
 
         std::cout << "\n======================================" << std::endl;
