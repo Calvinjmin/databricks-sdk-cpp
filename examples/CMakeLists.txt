@@ -20,6 +20,10 @@ target_link_libraries(unity_catalog_example PRIVATE databricks_sdk)
 add_executable(secrets_example secrets_example.cpp)
 target_link_libraries(secrets_example PRIVATE databricks_sdk)
 
+# ========== Workspace API Examples ==========
+add_executable(workspace_example workspace_example.cpp)
+target_link_libraries(workspace_example PRIVATE databricks_sdk)
+
 # Set RPATH for all examples to find ODBC libraries
 set_target_properties(
     simple_query
@@ -27,6 +31,7 @@ set_target_properties(
     compute_example
     unity_catalog_example
     secrets_example
+    workspace_example
     PROPERTIES
     BUILD_RPATH "${CMAKE_BINARY_DIR};/opt/homebrew/lib;/usr/local/lib"
     INSTALL_RPATH "/opt/homebrew/lib;/usr/local/lib"

@@ -5,6 +5,7 @@
 #include "../internal/http_client.h"
 #include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
+#include "../internal/url_utils.h"
 
 #include <sstream>
 #include <stdexcept>
@@ -32,7 +33,7 @@ public:
 // ============================================================================
 
 namespace {
-// Build query string from parameters
+// Build query string from parameters with URL encoding
 std::string build_query_string(const std::map<std::string, std::string>& params) {
     if (params.empty()) {
         return "";
@@ -45,7 +46,7 @@ std::string build_query_string(const std::map<std::string, std::string>& params)
         if (!first) {
             oss << "&";
         }
-        oss << key << "=" << value;
+        oss << key << "=" << internal::url_encode(value);
         first = false;
     }
     return oss.str();

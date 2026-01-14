@@ -5,6 +5,7 @@
 #include "../internal/http_client.h"
 #include "../internal/http_client_interface.h"
 #include "../internal/logger.h"
+#include "../internal/url_utils.h"
 
 #include <nlohmann/json.hpp>
 
@@ -51,7 +52,7 @@ std::vector<CatalogInfo> UnityCatalog::list_catalogs() {
 CatalogInfo UnityCatalog::get_catalog(const std::string& catalog_name) {
     internal::get_logger()->info("Getting catalog details for catalog=" + catalog_name);
 
-    auto response = pimpl_->http_client_->get("/unity-catalog/catalogs/" + catalog_name);
+    auto response = pimpl_->http_client_->get("/unity-catalog/catalogs/" + internal::url_encode(catalog_name));
     pimpl_->http_client_->check_response(response, "getCatalog");
 
     internal::get_logger()->debug("Catalog details response: " + response.body);
@@ -109,7 +110,8 @@ bool UnityCatalog::delete_catalog(const std::string& catalog_name, bool force) {
 std::vector<SchemaInfo> UnityCatalog::list_schemas(const std::string& catalog_name) {
     internal::get_logger()->info("Listing schemas in catalog: " + catalog_name);
 
-    auto response = pimpl_->http_client_->get("/unity-catalog/schemas?catalog_name=" + catalog_name);
+    auto response =
+        pimpl_->http_client_->get("/unity-catalog/schemas?catalog_name=" + internal::url_encode(catalog_name));
     pimpl_->http_client_->check_response(response, "listSchemas");
 
     internal::get_logger()->debug("Schemas list response: " + response.body);
@@ -119,7 +121,7 @@ std::vector<SchemaInfo> UnityCatalog::list_schemas(const std::string& catalog_na
 SchemaInfo UnityCatalog::get_schema(const std::string& full_name) {
     internal::get_logger()->info("Getting schema details for: " + full_name);
 
-    auto response = pimpl_->http_client_->get("/unity-catalog/schemas/" + full_name);
+    auto response = pimpl_->http_client_->get("/unity-catalog/schemas/" + internal::url_encode(full_name));
     pimpl_->http_client_->check_response(response, "getSchema");
 
     internal::get_logger()->debug("Schema details response: " + response.body);
@@ -169,8 +171,9 @@ bool UnityCatalog::delete_schema(const std::string& full_name) {
 std::vector<TableInfo> UnityCatalog::list_tables(const std::string& catalog_name, const std::string& schema_name) {
     internal::get_logger()->info("Listing tables in " + catalog_name + "." + schema_name);
 
-    // Create Endpoint with Catalog and Schema name
-    std::string endpoint = "/unity-catalog/tables?catalog_name=" + catalog_name + "&schema_name=" + schema_name;
+    // Create Endpoint with Catalog and Schema name (URL-encoded)
+    std::string endpoint = "/unity-catalog/tables?catalog_name=" + internal::url_encode(catalog_name) +
+                           "&schema_name=" + internal::url_encode(schema_name);
     auto response = pimpl_->http_client_->get(endpoint);
     pimpl_->http_client_->check_response(response, "listTables");
 
@@ -181,7 +184,7 @@ std::vector<TableInfo> UnityCatalog::list_tables(const std::string& catalog_name
 TableInfo UnityCatalog::get_table(const std::string& full_name) {
     internal::get_logger()->info("Getting table details for: " + full_name);
 
-    auto response = pimpl_->http_client_->get("/unity-catalog/tables/" + full_name);
+    auto response = pimpl_->http_client_->get("/unity-catalog/tables/" + internal::url_encode(full_name));
     pimpl_->http_client_->check_response(response, "getTable");
 
     internal::get_logger()->debug("Table details response: " + response.body);
