@@ -3,6 +3,7 @@
 #include "databricks/core/config.h"
 
 #include "../internal/logger.h"
+#include "../internal/path_utils.h"
 
 #include <cstdlib>
 #include <fstream>
@@ -19,7 +20,15 @@ AuthConfig AuthConfig::from_profile(const std::string& profile) {
         throw std::runtime_error("HOME environment variable not set");
     }
 
-    std::ifstream file(std::string(home) + "/.databrickscfg");
+    // Securely construct config file path to prevent path traversal
+    std::string config_path;
+    try {
+        config_path = internal::safe_join_path(home, ".databrickscfg");
+    } catch (const std::invalid_argument& e) {
+        throw std::runtime_error("Invalid HOME environment variable: " + std::string(e.what()));
+    }
+
+    std::ifstream file(config_path);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open ~/.databrickscfg");
     }
