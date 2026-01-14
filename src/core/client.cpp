@@ -5,6 +5,7 @@
 #include "databricks/connection_pool.h"
 
 #include "../internal/logger.h"
+#include "../internal/path_utils.h"
 #include "../internal/pool_manager.h"
 
 #include <chrono>
@@ -501,7 +502,21 @@ Client::Builder& Client::Builder::with_environment_config(const std::string& pro
         // Try to load from profile file
         const char* home = std::getenv("HOME");
         if (home) {
-            std::ifstream file(std::string(home) + "/.databrickscfg");
+            // Securely construct config file path to prevent path traversal
+            std::string config_path;
+            try {
+                config_path = internal::safe_join_path(home, ".databrickscfg");
+            } catch (const std::invalid_argument& e) {
+                // If path validation fails, skip file loading and continue
+                internal::get_logger()->warn("Invalid HOME environment variable: {}. Skipping profile file.", e.what());
+                config_path = "";
+            }
+
+            std::ifstream file;
+            if (!config_path.empty()) {
+                file.open(config_path);
+            }
+
             if (file.is_open()) {
                 std::string line;
                 bool in_profile_section = false;

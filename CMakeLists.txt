@@ -129,6 +129,7 @@ set(SOURCES
     src/internal/logger.cpp
     src/internal/http_client.cpp
     src/internal/url_utils.cpp
+    src/internal/path_utils.cpp
 )
 
 set(HEADERS
@@ -154,6 +155,7 @@ set(INTERNAL_HEADERS
     src/internal/logger.h
     src/internal/http_client.h
     src/internal/url_utils.h
+    src/internal/path_utils.h
 )
 
 # Create library target

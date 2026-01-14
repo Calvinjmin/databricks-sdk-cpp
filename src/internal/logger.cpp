@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 #include "logger.h"
 
+#include "path_utils.h"
+
 #include <cstdlib>
 #include <string>
 
@@ -15,10 +17,23 @@ std::shared_ptr<spdlog::logger> get_logger() {
         std::shared_ptr<spdlog::logger> log;
 
         // Check for log file environment variable
-        const char* log_file = std::getenv("DATABRICKS_LOG_FILE");
+        const char* log_file_env = std::getenv("DATABRICKS_LOG_FILE");
 
         try {
-            if (log_file && std::strlen(log_file) > 0) {
+            if (log_file_env && std::strlen(log_file_env) > 0) {
+                // Validate the log file path to prevent path traversal attacks
+                std::string log_file;
+                try {
+                    log_file = validate_env_path(log_file_env, "DATABRICKS_LOG_FILE");
+                } catch (const std::invalid_argument& e) {
+                    // If validation fails, log warning to stderr and use stderr sink
+                    auto temp_log = spdlog::stderr_color_mt("databricks_temp");
+                    temp_log->warn("Invalid DATABRICKS_LOG_FILE path: {}. Using stderr instead.", e.what());
+                    spdlog::drop("databricks_temp");
+                    log = spdlog::stderr_color_mt("databricks");
+                    return log;
+                }
+
                 // Log to file
                 log = spdlog::basic_logger_mt("databricks", log_file);
             } else {
