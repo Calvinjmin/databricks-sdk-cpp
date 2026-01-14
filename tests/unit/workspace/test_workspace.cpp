@@ -62,8 +62,12 @@ TEST_F(WorkspaceTest, MultipleValidWorkspaceClient) {
 }
 
 // ============================================================================
-// Workspace API Test
+// Workspace API Tests
 // ============================================================================
+
+// ----------------------------------------------------------------------------
+// List Tests
+// ----------------------------------------------------------------------------
 
 // Test: List Workspace Objects
 TEST_F(WorkspaceApiTest, ListWorkspaceObjectsSuccess) {
@@ -136,6 +140,10 @@ TEST_F(WorkspaceApiTest, ListWorkspaceObjectThrowsInvalidArgument) {
     EXPECT_THROW(workspace.list(empty_path), std::invalid_argument);
 }
 
+// ----------------------------------------------------------------------------
+// Mkdirs Tests
+// ----------------------------------------------------------------------------
+
 // Test: Create a Mock Directory
 TEST_F(WorkspaceApiTest, CreateDirectorySuccess) {
     EXPECT_CALL(*mock_client_, post("/workspace/mkdirs", Eq(R"({"path":"/test/path"})")))
@@ -153,6 +161,10 @@ TEST_F(WorkspaceApiTest, CreateEmptyDirectoryThrowsInvalidArgument) {
 
     EXPECT_THROW(workspace.mkdirs(empty_path), std::invalid_argument);
 }
+
+// ----------------------------------------------------------------------------
+// Get Status Tests
+// ----------------------------------------------------------------------------
 
 // Test: Get Status for a Workspace object
 TEST_F(WorkspaceApiTest, GetStatusSuccess) {
@@ -187,4 +199,255 @@ TEST_F(WorkspaceApiTest, GetStatusThrowsInvalidArgument) {
     const std::string& empty_path = "";
 
     EXPECT_THROW(workspace.get_status(empty_path), std::invalid_argument);
+}
+
+// ============================================================================
+// Export File Tests
+// ============================================================================
+
+// Test: Export file successfully with SOURCE format
+TEST_F(WorkspaceApiTest, ExportFileSuccessWithSourceFormat) {
+    std::string mock_export_response = R"({
+        "content": "cHJpbnQoImhlbGxvIHdvcmxkIik=",
+        "file_type": "py"
+    })";
+
+    EXPECT_CALL(*mock_client_, get("/workspace/export?path=%2Ftest%2Fnotebook&format=SOURCE"))
+        .WillOnce(Return(MockHttpClient::success_response(mock_export_response)));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    auto response = workspace.export_file(mock_path, databricks::ExportFormat::SOURCE);
+
+    // Verify the export response
+    EXPECT_EQ(response.content, "cHJpbnQoImhlbGxvIHdvcmxkIik=");
+    EXPECT_EQ(response.file_type, "py");
+}
+
+// Test: Export file successfully with JUPYTER format
+TEST_F(WorkspaceApiTest, ExportFileSuccessWithJupyterFormat) {
+    std::string mock_export_response = R"({
+        "content": "eyJ2ZXJzaW9uIjogMX0=",
+        "file_type": "ipynb"
+    })";
+
+    EXPECT_CALL(*mock_client_, get("/workspace/export?path=%2Ftest%2Fnotebook&format=JUPYTER"))
+        .WillOnce(Return(MockHttpClient::success_response(mock_export_response)));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    auto response = workspace.export_file(mock_path, databricks::ExportFormat::JUPYTER);
+
+    // Verify the export response
+    EXPECT_EQ(response.content, "eyJ2ZXJzaW9uIjogMX0=");
+    EXPECT_EQ(response.file_type, "ipynb");
+}
+
+// Test: Export file successfully with HTML format
+TEST_F(WorkspaceApiTest, ExportFileSuccessWithHtmlFormat) {
+    std::string mock_export_response = R"({
+        "content": "PGh0bWw+PC9odG1sPg==",
+        "file_type": "html"
+    })";
+
+    EXPECT_CALL(*mock_client_, get("/workspace/export?path=%2Ftest%2Fnotebook&format=HTML"))
+        .WillOnce(Return(MockHttpClient::success_response(mock_export_response)));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    auto response = workspace.export_file(mock_path, databricks::ExportFormat::HTML);
+
+    // Verify the export response
+    EXPECT_EQ(response.content, "PGh0bWw+PC9odG1sPg==");
+    EXPECT_EQ(response.file_type, "html");
+}
+
+// Test: Export file with DBC format for directory export
+TEST_F(WorkspaceApiTest, ExportFileSuccessWithDbcFormat) {
+    std::string mock_export_response = R"({
+        "content": "UEsDBBQAAAAIAA==",
+        "file_type": "dbc"
+    })";
+
+    EXPECT_CALL(*mock_client_, get("/workspace/export?path=%2Ftest%2Fdirectory&format=DBC"))
+        .WillOnce(Return(MockHttpClient::success_response(mock_export_response)));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/directory";
+    auto response = workspace.export_file(mock_path, databricks::ExportFormat::DBC);
+
+    // Verify the export response
+    EXPECT_EQ(response.content, "UEsDBBQAAAAIAA==");
+    EXPECT_EQ(response.file_type, "dbc");
+}
+
+// Test: Fail to export file with empty path
+TEST_F(WorkspaceApiTest, ExportFileThrowsInvalidArgument) {
+    databricks::Workspace workspace(mock_client_);
+    const std::string& empty_path = "";
+
+    EXPECT_THROW(workspace.export_file(empty_path, databricks::ExportFormat::SOURCE), std::invalid_argument);
+}
+
+// ============================================================================
+// Import File Tests
+// ============================================================================
+
+// Test: Import file successfully with SOURCE format and Python language
+TEST_F(WorkspaceApiTest, ImportFileSuccessWithSourceFormat) {
+    std::string expected_body =
+        R"({"content":"cHJpbnQoImhlbGxvIHdvcmxkIik=","format":"SOURCE","language":"PYTHON","overwrite":false,"path":"/test/notebook"})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/import", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    const std::string& mock_content = "cHJpbnQoImhlbGxvIHdvcmxkIik=";
+    workspace.import_file(mock_path, mock_content, databricks::ImportFormat::SOURCE, databricks::Language::PYTHON,
+                          false);
+}
+
+// Test: Import file successfully with JUPYTER format (no language required)
+TEST_F(WorkspaceApiTest, ImportFileSuccessWithJupyterFormat) {
+    std::string expected_body =
+        R"({"content":"eyJ2ZXJzaW9uIjogMX0=","format":"JUPYTER","overwrite":false,"path":"/test/notebook"})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/import", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    const std::string& mock_content = "eyJ2ZXJzaW9uIjogMX0=";
+    workspace.import_file(mock_path, mock_content, databricks::ImportFormat::JUPYTER);
+}
+
+// Test: Import file with overwrite enabled
+TEST_F(WorkspaceApiTest, ImportFileSuccessWithOverwrite) {
+    std::string expected_body =
+        R"({"content":"cHJpbnQoImhlbGxvIHdvcmxkIik=","format":"SOURCE","language":"SCALA","overwrite":true,"path":"/test/notebook"})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/import", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    const std::string& mock_content = "cHJpbnQoImhlbGxvIHdvcmxkIik=";
+    workspace.import_file(mock_path, mock_content, databricks::ImportFormat::SOURCE, databricks::Language::SCALA, true);
+}
+
+// Test: Import file with AUTO format
+TEST_F(WorkspaceApiTest, ImportFileSuccessWithAutoFormat) {
+    std::string expected_body =
+        R"({"content":"cHJpbnQoImhlbGxvIHdvcmxkIik=","format":"AUTO","overwrite":false,"path":"/test/notebook"})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/import", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    const std::string& mock_content = "cHJpbnQoImhlbGxvIHdvcmxkIik=";
+    workspace.import_file(mock_path, mock_content, databricks::ImportFormat::AUTO);
+}
+
+// Test: Import file with DBC format for directory import
+TEST_F(WorkspaceApiTest, ImportFileSuccessWithDbcFormat) {
+    std::string expected_body =
+        R"({"content":"UEsDBBQAAAAIAA==","format":"DBC","overwrite":false,"path":"/test/directory"})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/import", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/directory";
+    const std::string& mock_content = "UEsDBBQAAAAIAA==";
+    workspace.import_file(mock_path, mock_content, databricks::ImportFormat::DBC);
+}
+
+// Test: Import file using ImportRequest struct
+TEST_F(WorkspaceApiTest, ImportFileSuccessWithImportRequest) {
+    std::string expected_body =
+        R"({"content":"cHJpbnQoImhlbGxvIHdvcmxkIik=","format":"SOURCE","language":"PYTHON","overwrite":true,"path":"/test/notebook"})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/import", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+
+    databricks::ImportRequest request;
+    request.path = "/test/notebook";
+    request.content = "cHJpbnQoImhlbGxvIHdvcmxkIik=";
+    request.format = databricks::ImportFormat::SOURCE;
+    request.language = databricks::Language::PYTHON;
+    request.overwrite = true;
+
+    workspace.import_file(request);
+}
+
+// Test: Fail to import file with empty path
+TEST_F(WorkspaceApiTest, ImportFileThrowsInvalidArgumentForEmptyPath) {
+    databricks::Workspace workspace(mock_client_);
+    const std::string& empty_path = "";
+    const std::string& mock_content = "cHJpbnQoImhlbGxvIHdvcmxkIik=";
+
+    EXPECT_THROW(workspace.import_file(empty_path, mock_content, databricks::ImportFormat::SOURCE),
+                 std::invalid_argument);
+}
+
+// Test: Fail to import file with empty content
+TEST_F(WorkspaceApiTest, ImportFileThrowsInvalidArgumentForEmptyContent) {
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    const std::string& empty_content = "";
+
+    EXPECT_THROW(workspace.import_file(mock_path, empty_content, databricks::ImportFormat::SOURCE),
+                 std::invalid_argument);
+}
+
+// ============================================================================
+// Delete Object Tests
+// ============================================================================
+
+// Test: Delete file successfully without recursion
+TEST_F(WorkspaceApiTest, DeleteObjectSuccessNonRecursive) {
+    std::string expected_body = R"({"path":"/test/notebook","recursive":false})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/delete", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    workspace.delete_object(mock_path, false);
+}
+
+// Test: Delete directory successfully with recursion
+TEST_F(WorkspaceApiTest, DeleteObjectSuccessRecursive) {
+    std::string expected_body = R"({"path":"/test/directory","recursive":true})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/delete", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/directory";
+    workspace.delete_object(mock_path, true);
+}
+
+// Test: Delete object with default recursive parameter (false)
+TEST_F(WorkspaceApiTest, DeleteObjectSuccessDefaultRecursive) {
+    std::string expected_body = R"({"path":"/test/notebook","recursive":false})";
+
+    EXPECT_CALL(*mock_client_, post("/workspace/delete", Eq(expected_body)))
+        .WillOnce(Return(MockHttpClient::success_response("")));
+
+    databricks::Workspace workspace(mock_client_);
+    const std::string& mock_path = "/test/notebook";
+    workspace.delete_object(mock_path); // Default recursive=false
+}
+
+// Test: Fail to delete object with empty path
+TEST_F(WorkspaceApiTest, DeleteObjectThrowsInvalidArgument) {
+    databricks::Workspace workspace(mock_client_);
+    const std::string& empty_path = "";
+
+    EXPECT_THROW(workspace.delete_object(empty_path, false), std::invalid_argument);
 }
